@@ -1,0 +1,846 @@
+<meta charset="utf-8">
+<title>세종 생활권 상황판</title>
+<meta name="description" content="행복도시 6개 생활권의 기능·연계·광역 관계를 지표와 지도로 점검하고 재구조화 방향을 정리한 상황판">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Myeongjo:wght@700;800&display=swap">
+<style>
+:root{
+  --ground:#F2F4F1; --panel:#FFFFFF; --panel2:#F7F8F6; --ink:#15232A; --ink2:#4B5B62; --ink3:#7C8A8F;
+  --line:#D6DDD9; --line2:#E6EBE8; --accent:#1D5C7C; --accent-soft:#E1ECF1;
+  --good:#2E7D4F; --warn:#B26F12; --bad:#B03A3A; --good-soft:#E3F1E8; --warn-soft:#F7ECDA; --bad-soft:#F6E2E2;
+  --q0:#E9EFF1; --q1:#C9DCE4; --q2:#94BCCD; --q3:#5A95B2; --q4:#2C6E8F; --q5:#123F57;
+  --na:#EEF0EE; --halo:#FFFFFF; --roads:#8E9A9D; --brt:#C0392B; --outline:#1C2B31;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --serif:"Nanum Myeongjo","AppleMyungjo","Batang",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1619; --panel:#152125; --panel2:#1A282D; --ink:#E3ECEA; --ink2:#A4B4B4; --ink3:#72858A;
+    --line:#2B3B40; --line2:#223237; --accent:#74B8D6; --accent-soft:#1D3441;
+    --good:#6CC08E; --warn:#E0A64A; --bad:#E07A72; --good-soft:#18342A; --warn-soft:#3A2E1A; --bad-soft:#3A2022;
+    --q0:#1B2A30; --q1:#1F3D4B; --q2:#2A5A70; --q3:#3F8099; --q4:#6AAFC8; --q5:#A9DBEC;
+    --na:#1A2428; --halo:#152125; --roads:#6B7A7E; --brt:#E3705F; --outline:#D7E3E1;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1619; --panel:#152125; --panel2:#1A282D; --ink:#E3ECEA; --ink2:#A4B4B4; --ink3:#72858A;
+  --line:#2B3B40; --line2:#223237; --accent:#74B8D6; --accent-soft:#1D3441;
+  --good:#6CC08E; --warn:#E0A64A; --bad:#E07A72; --good-soft:#18342A; --warn-soft:#3A2E1A; --bad-soft:#3A2022;
+  --q0:#1B2A30; --q1:#1F3D4B; --q2:#2A5A70; --q3:#3F8099; --q4:#6AAFC8; --q5:#A9DBEC;
+  --na:#1A2428; --halo:#152125; --roads:#6B7A7E; --brt:#E3705F; --outline:#D7E3E1;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;margin:0}
+.wrap{max-width:1440px;margin:0 auto;padding-inline:20px;padding-block:0 48px}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11.5px;letter-spacing:.08em;color:var(--ink3);font-weight:600}
+
+/* 머리 */
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-block:28px 16px;border-bottom:1px solid var(--line)}
+header.top h1{font-family:var(--serif);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.01em;line-height:1.2}
+header.top .sub{color:var(--ink2);margin-top:6px;max-width:70ch}
+.hdr-right{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12.5px}
+.btn:hover{border-color:var(--ink3)}
+.notice{margin-top:14px;border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:6px;padding:9px 14px;font-size:13px}
+.notice b{color:var(--warn)}
+
+/* 문제 제기 */
+.brief{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,2fr);gap:28px;padding-block:24px 8px}
+.brief .lead{font-size:15px;color:var(--ink)}
+.brief .lead p{margin:0 0 10px}
+.brief .lead .q{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.5;margin-bottom:12px}
+.axes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.axis{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.axis .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent)}
+.axis .tag i{font-style:normal;font-family:var(--mono);background:var(--accent-soft);border-radius:4px;padding:0 6px}
+.axis h3{font-size:15.5px;font-weight:700}
+.axis .big{font-family:var(--mono);font-size:28px;font-weight:500;line-height:1.1;margin-top:4px}
+.axis .big small{font-size:13px;color:var(--ink3);margin-left:4px;font-family:var(--sans)}
+.axis p{margin:0;color:var(--ink2);font-size:13px}
+.axis .ask{margin-top:auto;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink2)}
+
+/* 작업대 */
+section{margin-top:28px}
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin-bottom:12px}
+.sec-h h2{font-family:var(--serif);font-size:22px;font-weight:800}
+.sec-h .note{color:var(--ink3);font-size:12.5px;max-width:80ch}
+.bench{display:grid;grid-template-columns:250px minmax(0,1fr) 310px;gap:14px;align-items:start}
+.rail,.detail{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.rail h4,.detail h4{margin:10px 0 6px;font-size:12px;color:var(--ink3);letter-spacing:.06em;font-weight:600}
+.rail h4:first-child{margin-top:0}
+.ind{display:flex;width:100%;text-align:left;justify-content:space-between;gap:8px;align-items:center;border:1px solid transparent;background:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:13px}
+.ind:hover{background:var(--panel2)}
+.ind[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.ind .u{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.axis-h{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:12px;font-weight:700;color:var(--ink2)}
+.axis-h i{font-style:normal;font-family:var(--mono);font-size:11px;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 5px}
+.axis-h:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.mapbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}
+.maptools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line2)}
+.maptitle{font-weight:700;font-size:14px}
+.maptitle span{font-weight:400;color:var(--ink3);font-size:12px;margin-left:6px}
+svg#map{display:block;width:100%;height:auto;aspect-ratio:900/640;max-height:74vh;background:var(--panel2);cursor:grab;touch-action:none}
+svg#map.drag{cursor:grabbing}
+#map .u{stroke:var(--halo);stroke-width:.8;vector-effect:non-scaling-stroke;fill-rule:evenodd;cursor:pointer;transition:fill .25s}
+#map .u:hover{stroke:var(--ink);stroke-width:1.6}
+#map .u.sel{stroke:var(--ink);stroke-width:2.6}
+#map .q0{fill:var(--q0)}#map .q1{fill:var(--q1)}#map .q2{fill:var(--q2)}#map .q3{fill:var(--q3)}#map .q4{fill:var(--q4)}#map .q5{fill:var(--q5)}
+#map .qn{fill:url(#hatch)}
+#map .zh{fill:none;stroke:var(--halo);stroke-width:5;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:none}
+#map .zl{fill:none;stroke-width:2.4;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:none}
+#map .city{fill:none;stroke:var(--outline);stroke-width:1.4;vector-effect:non-scaling-stroke;pointer-events:none}
+#map .rd{fill:none;stroke:var(--roads);stroke-width:.8;vector-effect:non-scaling-stroke;pointer-events:none;opacity:.8}
+#map .rd.expressway{stroke-width:1.5}
+#map .rd.brt{stroke:var(--brt);stroke-width:1.8;stroke-dasharray:5 3;opacity:.9}
+#map .fl{fill:none;stroke:var(--ink);stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.35;pointer-events:none}
+#map .fx{fill:none;stroke:var(--accent);stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.55;pointer-events:none}
+#map .lbl{fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none;font-family:var(--sans)}
+#map .zlbl{font-weight:700;paint-order:stroke;stroke:var(--halo);stroke-width:4px;pointer-events:none;font-family:var(--sans)}
+#map .xn{fill:var(--panel);stroke:var(--accent);vector-effect:non-scaling-stroke;stroke-width:1.4}
+#map .xlbl{fill:var(--accent);font-weight:700;paint-order:stroke;stroke:var(--halo);stroke-width:3px;pointer-events:none}
+#map .an{stroke:var(--halo);stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:help}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:8px 12px;border-top:1px solid var(--line2);font-size:12px;color:var(--ink2)}
+.ramp{display:flex;align-items:center;gap:0}
+.ramp span{display:inline-block;width:34px;height:10px}
+.ramp-lab{display:flex;gap:0;font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.ramp-lab span{width:34px;text-align:center}
+.lg-item{display:inline-flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:14px;height:10px;border-radius:2px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12px;padding:6px 9px;border-radius:6px;max-width:260px;line-height:1.45;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.tip b{font-weight:700}
+.detail .dh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.detail .dn{font-family:var(--serif);font-size:20px;font-weight:800}
+.zchip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:4px;padding:1px 7px;color:#fff}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:12.5px;margin-top:6px}
+.kv .k{color:var(--ink2);cursor:pointer}
+.kv .k:hover{color:var(--accent);text-decoration:underline}
+.kv .k.on{color:var(--accent);font-weight:700}
+.kv .v{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.kv .bar{grid-column:1/-1;height:3px;background:var(--line2);border-radius:2px;margin-bottom:5px;position:relative}
+.kv .bar i{position:absolute;top:-2px;width:3px;height:7px;background:var(--ink);border-radius:1px}
+.kv .bar b{position:absolute;left:0;top:0;height:3px;background:var(--q3);border-radius:2px}
+.rank-list{list-style:none;padding:0;margin:4px 0 0;font-size:12.5px}
+.rank-list li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dotted var(--line2);cursor:pointer}
+.rank-list li:hover{color:var(--accent)}
+.muted{color:var(--ink3)}
+.small{font-size:12px}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 9px}
+.p-keep{background:var(--good-soft);color:var(--good)}
+.p-boost{background:var(--warn-soft);color:var(--warn)}
+.p-shift{background:var(--bad-soft);color:var(--bad)}
+
+/* 순위 막대 */
+.rankbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:14px}
+.rankgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2px 28px}
+.rrow{display:grid;grid-template-columns:70px minmax(0,1fr) 64px;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:1px 0}
+.rrow:hover .rn{color:var(--accent)}
+.rrow.sel .rn{font-weight:700;color:var(--accent)}
+.rrow .rb{height:9px;border-radius:2px}
+.rrow .rv{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+
+/* 생활권 진단 */
+.zgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.zc{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.zc:hover{border-color:var(--ink3)}
+.zc .zt{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.zc .zn{font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px}
+.zc .zn i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.zc .role{font-size:12px;color:var(--ink3)}
+.zc h3{font-size:13.5px;font-weight:700;line-height:1.4}
+.zc p{margin:0;font-size:12.5px;color:var(--ink2)}
+.zc .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-top:1px solid var(--line2);padding-top:6px;margin-top:auto}
+.zc .stats div{font-size:11px;color:var(--ink3)}
+.zc .stats b{display:block;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:500}
+.radar{width:100%;max-width:220px;height:auto;align-self:center}
+.radar text{font-size:9.5px;fill:var(--ink2);font-family:var(--sans)}
+
+/* 연계 */
+.two{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card h3{font-size:14.5px;font-weight:700;margin-bottom:6px}
+.scroll-x{overflow-x:auto}
+table.mx{border-collapse:collapse;font-size:12px;min-width:460px;width:100%}
+table.mx th,table.mx td{padding:5px 6px;text-align:center;border:1px solid var(--line2)}
+table.mx th{font-weight:600;color:var(--ink2);background:var(--panel2)}
+table.mx td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.xbars{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.xb{display:grid;grid-template-columns:110px minmax(0,1fr) 52px;gap:8px;align-items:center;font-size:12.5px}
+.xb .t{height:14px;background:var(--line2);border-radius:3px;overflow:hidden;display:flex}
+.xb .t span{height:100%}
+.xb .v{text-align:right;font-family:var(--mono)}
+
+/* 이론 */
+.theory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
+.th{padding:12px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:78px minmax(0,1fr);gap:4px 14px}
+.th .g{font-size:11.5px;color:var(--ink3);font-weight:600;line-height:1.4}
+.th .g b{display:block;color:var(--accent);font-size:11px}
+.th .c{font-size:12.5px;color:var(--ink);font-weight:600}
+.th .i{font-size:13px;color:var(--ink2);margin-top:3px}
+.th .us{font-size:13px;margin-top:4px}
+.th .us::before{content:"→ ";color:var(--accent);font-weight:700}
+.ichip{display:inline-block;border:1px solid var(--accent);color:var(--accent);background:none;border-radius:4px;padding:0 6px;font-size:11.5px;margin:4px 4px 0 0;cursor:pointer}
+.ichip:hover{background:var(--accent-soft)}
+
+/* 개선방향 */
+.strat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.scol h3{font-size:15px;font-weight:700;display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.scol h3 i{font-style:normal;font-family:var(--mono);font-size:12px;background:var(--accent);color:var(--panel);border-radius:4px;padding:0 6px}
+.st{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.st h4{font-size:14px;margin:0 0 4px;font-weight:700}
+.st p{margin:0;font-size:13px;color:var(--ink2)}
+.st .basis{margin-top:6px;font-size:11.5px;color:var(--ink3)}
+.cases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px}
+.case{border-top:2px solid var(--ink);padding-top:8px}
+.case b{font-size:13.5px}
+.case p{margin:4px 0 0;font-size:12.5px;color:var(--ink2)}
+.case .ls{color:var(--ink);font-weight:500}
+
+/* 자료원 */
+table.api{border-collapse:collapse;width:100%;font-size:12.5px;min-width:760px}
+table.api th{text-align:left;font-weight:600;color:var(--ink3);font-size:11.5px;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.api td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:top}
+table.api code{font-family:var(--mono);font-size:11px;color:var(--ink2);word-break:break-all}
+.s403{background:var(--warn-soft);color:var(--warn)}
+.stodo{background:var(--panel2);color:var(--ink2);border:1px solid var(--line)}
+.skey{background:var(--accent-soft);color:var(--accent)}
+.sfile{background:var(--panel2);color:var(--ink3);border:1px dashed var(--line)}
+.sok{background:var(--good-soft);color:var(--good)}
+footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--ink3);font-size:12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px}
+footer p{margin:0;max-width:90ch}
+
+@media (max-width:1180px){
+  .bench{grid-template-columns:220px minmax(0,1fr)}
+  .detail{grid-column:1/-1}
+  .zgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cases{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .brief{grid-template-columns:1fr}
+  .axes{grid-template-columns:1fr}
+  .bench{grid-template-columns:1fr}
+  .rail{order:2}
+  .two,.theory,.strat{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .wrap{padding-inline:16px}
+  .zgrid,.cases{grid-template-columns:1fr}
+  .th{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div>
+    <div class="eyebrow">세종연구원 · 생활권 재구조화 검토 자료(초안)</div>
+    <h1>세종 생활권 재구조화 상황판</h1>
+    <div class="sub">행복도시 6개 생활권이 지금의 도시기능과 앞으로의 국가계획·세종시 계획을 담고 있는지 지표와 지도로 점검합니다. 경계를 다시 긋기 전에 생활권마다 맡은 역할과 생활권 사이의 연결, 광역권과의 관계부터 봅니다.</div>
+  </div>
+  <div class="hdr-right">
+    <span class="small muted" id="stamp"></span>
+    <button class="btn" id="theme" type="button">화면 밝기</button>
+  </div>
+</header>
+<div class="notice" id="notice" hidden></div>
+
+<div class="brief">
+  <div class="lead">
+    <div class="q">"6개 생활권 체계가 지금의 도시기능과 앞으로의 국가계획을 담고 있는가?"</div>
+    <p>행복도시는 중앙녹지를 비워 두고 둘레에 여섯 개의 <b>기능 생활권</b>을 배치했습니다. 20년이 지나며 국회세종의사당·대통령 세종집무실 같은 국가중추기능이 새로 들어오고, 2040 도시기본계획은 시 전체를 다른 생활권 체계(1대·4중생활권)로 나눴습니다. 대전·청주와의 광역 관계도 달라졌습니다.</p>
+    <p class="small muted">그래서 이 상황판은 경계 조정을 출발점으로 삼지 않습니다. 아래 세 축으로 먼저 진단하고, 축마다 국내외 이론에 근거한 지표를 붙였습니다.</p>
+  </div>
+  <div class="axes" id="axes"></div>
+</div>
+
+<section id="bench-sec">
+  <div class="sec-h">
+    <h2>지표 지도</h2>
+    <div class="note">왼쪽에서 지표를 고르면 읍면동이 5분위로 칠해집니다. 면을 누르면 오른쪽에 그 동의 전체 지표가 뜹니다. 휠로 확대하고 끌어서 옮깁니다.</div>
+  </div>
+  <div class="bench">
+    <aside class="rail" id="rail"></aside>
+    <div>
+      <div class="mapbox" id="mapbox">
+        <div class="maptools">
+          <div class="maptitle" id="maptitle"></div>
+          <div class="chips" id="views"></div>
+        </div>
+        <svg id="map" viewBox="0 0 900 640" role="img" aria-label="세종시 생활권 지표 지도"></svg>
+        <div class="legend" id="legend"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+    <aside class="detail" id="detail"></aside>
+  </div>
+  <div class="rankbox">
+    <div class="sec-h" style="margin-bottom:6px"><h3 id="rank-h" style="font-size:14.5px"></h3><div class="note" id="rank-note"></div></div>
+    <div class="rankgrid" id="rank"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h">
+    <h2>생활권 진단 — 계획기능 대비 실제</h2>
+    <div class="note">방사형 그래프는 여섯 기능의 특화도(LQ, 점선 원 = 세종 평균 1.0)입니다. 굵은 축이 그 생활권에 계획된 기능입니다. 판정: <span class="pill p-keep">유지·고도화</span> <span class="pill p-boost">보강</span> <span class="pill p-shift">전환·재정의</span></div>
+  </div>
+  <div class="zgrid" id="zones"></div>
+</section>
+
+<section>
+  <div class="sec-h">
+    <h2>연계 구조 — 생활권 사이, 그리고 광역</h2>
+    <div class="note">형태적으로 여러 중심이 '있는 것'과 기능적으로 서로 '주고받는 것'은 다릅니다(Burger &amp; Meijers, 2012). 흐름은 지도에서도 켤 수 있습니다.</div>
+  </div>
+  <div class="two">
+    <div class="card">
+      <h3>생활권 간 통행(천 통행/일, 양방향 합)</h3>
+      <div class="scroll-x"><table class="mx" id="matrix"></table></div>
+      <p class="small muted" id="mx-note" style="margin:8px 0 0"></p>
+    </div>
+    <div class="card">
+      <h3>광역 통행 — 어디와, 어느 생활권이</h3>
+      <div class="xbars" id="xbars"></div>
+      <p class="small muted" style="margin:10px 0 0">대전(남서)과의 연결이 강해지고 청주·천안(북동)과는 약해졌다는 연구 결과(변은주 외, 2023)가 기준선입니다. 막대 안의 색은 그 통행을 내는 생활권입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h">
+    <h2>이론 틀 — 무엇을 근거로 무엇을 재는가</h2>
+    <div class="note">지표 칩을 누르면 위 지도가 그 지표로 바뀝니다.</div>
+  </div>
+  <div class="theory" id="theory"></div>
+</section>
+
+<section>
+  <div class="sec-h">
+    <h2>개선방향</h2>
+    <div class="note">단순 경계조정 대신 세 축의 처방입니다. 각 처방 아래에 근거 이론과 점검 지표를 달았습니다.</div>
+  </div>
+  <div class="strat" id="strat"></div>
+  <div class="card" style="margin-top:4px">
+    <h3>국외 사례에서 가져올 것</h3>
+    <div class="cases" id="cases"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h">
+    <h2>자료원과 연동 상태</h2>
+    <div class="note" id="api-note"></div>
+  </div>
+  <div class="card scroll-x"><table class="api" id="apis"></table></div>
+</section>
+
+<footer>
+  <p>지도: OpenStreetMap 기여자(ODbL) 행정경계·도로를 단순화. OSM 에 어진동·가람동 경계가 없어 각각 도담동·한솔동 면에 포함해 그렸습니다. 생활권 경계는 구성 동을 합친 것이며 법정 경계가 아닙니다.</p>
+  <p id="foot-src"></p>
+</footer>
+</div>
+
+<script type="application/json" id="data">/*__DATA__*/null</script>
+<script>
+(function(){
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store = {get(k,d){try{const v=localStorage.getItem("lz:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+               set(k,v){try{localStorage.setItem("lz:"+k,JSON.stringify(v))}catch(e){}}};
+
+const ZONE = Object.fromEntries(D.zones.map(z => [z.id, z]));
+const IND = Object.fromEntries(D.indicators.map(i => [i.id, i]));
+const UNITS = D.units;                        // name -> {zone, pop, ...}
+const NAMES = D.shapes.map(s => s.name);
+const THEORY = Object.fromEntries(D.theory.map(t => [t.key, t]));
+
+/* 테마 */
+(function(){
+  const saved = store.get("theme", null);
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+  $("#theme").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const nxt = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", nxt); store.set("theme", nxt);
+  });
+})();
+$("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.meta.built : "자료 기준 " + D.meta.asof + " · 생성 " + D.meta.built;
+if (D.meta.demo) {
+  const n = $("#notice"); n.hidden = false;
+  n.innerHTML = "<b>샘플 자료입니다.</b> 이 화면의 수치는 실제 통계·관측값이 아닙니다. 지표 체계와 화면 구성을 검토하기 위한 예시이며, API 활용신청이 승인되면 실측으로 바뀝니다. 생활권 구성·계획 내용·문헌은 실제 자료입니다.";
+}
+
+/* 형식 */
+function fmt(id, v){
+  if (v == null || Number.isNaN(v)) return "—";
+  const f = IND[id] ? IND[id].fmt : "x2";
+  if (f === "int") return Math.round(v).toLocaleString("ko-KR");
+  if (f === "pct1") return v.toFixed(1);
+  if (f === "pct0") return Math.round(v).toString();
+  if (f === "x2") return v.toFixed(2);
+  return String(v);
+}
+function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만원" || u === "분" || u === "%" || u === "배" ? u : ""; }
+
+/* ── 머리 세 축 ── */
+(function(){
+  const lqPlan = D.zones.filter(z => D.planned[z.id] != null)
+    .map(z => ({z, v: D.lq[z.id][D.planned[z.id]]}));
+  const weak = lqPlan.filter(x => x.v < 1);
+  const tot = D.flows.reduce((a, f) => a + f[2], 0);
+  const core = D.flows.filter(f => ["1","2","3"].includes(f[0]) && ["1","2","3"].includes(f[1])).reduce((a,f)=>a+f[2],0);
+  const xt = D.external.reduce((a, x) => a + x.trips, 0);
+  const dj = D.external.find(x => x.id === "dj");
+  const cards = [
+    {k:"A", big: weak.length + "<small>/ 6개 생활권</small>",
+     p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권.",
+     ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
+    {k:"B", big: Math.round(core / tot * 100) + "<small>%</small>",
+     p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중. 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
+     ask:"BRT 순환축을 생활권 사이의 중심으로 쓸 것인가?"},
+    {k:"C", big: Math.round(dj.trips / xt * 100) + "<small>% 대전</small>",
+     p: "시 경계를 넘는 통행 가운데 대전 몫. 국가상징구역(S생활권)은 아직 생활권 체계 밖에 있습니다.",
+     ask:"국가중추기능과 광역 관계를 생활권 위계에 넣을 것인가?"},
+  ];
+  $("#axes").innerHTML = cards.map(c => `
+    <div class="axis"><span class="tag"><i>${c.k}</i>${esc(D.axes[c.k].short)}</span>
+      <h3>${esc(D.axes[c.k].name)}</h3>
+      <div class="big">${c.big}</div>
+      <p>${esc(c.p)}</p>
+      <div class="ask">${esc(c.ask)}</div></div>`).join("");
+})();
+
+/* ── 지도 ── */
+const LON0 = 127.10, LON1 = 127.47, LAT0 = 36.355, LAT1 = 36.785;
+const KX = Math.cos(36.57 * Math.PI / 180);
+const SC = 900 / ((LON1 - LON0) * KX);
+const X = lon => (lon - LON0) * KX * SC, Y = lat => (LAT1 - lat) * SC;
+const FULL = {x:0, y:0, w:900, h:(LAT1 - LAT0) * SC};
+function boxOf(l0, b0, l1, b1){ // 900:640 비율로 맞춘다
+  const x0 = X(l0), x1 = X(l1), y0 = Y(b1), y1 = Y(b0);
+  let w = x1 - x0, h = y1 - y0; const r = 900 / 640;
+  if (w / h > r) { const nh = w / r; return {x:x0, y:y0 - (nh - h) / 2, w, h:nh}; }
+  const nw = h * r; return {x:x0 - (nw - w) / 2, y:y0, w:nw, h};
+}
+const VIEWS = {
+  core: {name:"행복도시", box: boxOf(127.215, 36.455, 127.365, 36.552)},
+  city: {name:"세종 전역", box: boxOf(127.11, 36.395, 127.43, 36.745)},
+  region: {name:"광역", box: boxOf(127.09, 36.36, 127.48, 36.785)},
+};
+function ringsPath(rings){
+  return rings.map(r => "M" + r.map(p => X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("L") + "Z").join("");
+}
+function linePath(lines){
+  return lines.map(l => "M" + l.map(p => X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("L")).join("");
+}
+const svg = $("#map");
+const NS = "http://www.w3.org/2000/svg";
+const shapeById = Object.fromEntries(D.shapes.map(s => [s.name, s]));
+
+let state = {
+  ind: store.get("ind", "svc"),
+  sel: store.get("sel", null),
+  view: store.get("view", "core"),
+  layers: Object.assign({zone:true, anchor:true, flow:false, ext:false, road:true, name:true}, store.get("layers", {})),
+};
+if (!IND[state.ind]) state.ind = "svc";
+if (state.sel && !UNITS[state.sel]) state.sel = null;
+let vb = Object.assign({}, (VIEWS[state.view] || VIEWS.core).box);
+
+function build(){
+  const zl = D.zoneShapes.map(z => {
+    const c = ZONE[z.id].color; const d = ringsPath(z.rings);
+    return `<path class="zh" d="${d}"/><path class="zl" d="${d}" stroke="${c}"/>`;
+  }).join("");
+  const units = D.shapes.map(s => `<path class="u" data-n="${esc(s.name)}" d="${ringsPath(s.rings)}"/>`).join("");
+  const roads = D.roads.map(r => `<path class="rd ${r.cls}" d="${linePath(r.lines)}"/>`).join("");
+  svg.innerHTML = `
+    <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" fill="var(--na)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--line)" stroke-width="2"/></pattern>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--accent)"/></marker></defs>
+    <g id="g-units">${units}</g>
+    <path class="city" d="${ringsPath(D.outline)}"/>
+    <g id="g-roads">${roads}</g>
+    <g id="g-zones">${zl}</g>
+    <g id="g-flows"></g><g id="g-ext"></g>
+    <g id="g-names"></g><g id="g-zlabels"></g><g id="g-anchors"></g>`;
+  svg.querySelectorAll(".u").forEach(p => {
+    p.addEventListener("mousemove", e => showTip(e, unitTip(p.dataset.n)));
+    p.addEventListener("mouseleave", hideTip);
+    p.addEventListener("click", () => { if (!moved) select(p.dataset.n); });
+  });
+}
+
+/* 5분위 */
+function breaks(id){
+  const vals = NAMES.map(n => UNITS[n][id]).filter(v => v != null).sort((a,b) => a - b);
+  if (!vals.length) return [];
+  const q = [];
+  for (let i = 1; i < 5; i++) q.push(vals[Math.min(vals.length - 1, Math.floor(vals.length * i / 5))]);
+  return {vals, q};
+}
+function klass(v, br){
+  if (v == null) return "qn";
+  let k = 1; for (const t of br.q) if (v >= t) k++;
+  return "q" + Math.min(5, k);
+}
+function paint(){
+  const br = breaks(state.ind);
+  svg.querySelectorAll(".u").forEach(p => {
+    const v = UNITS[p.dataset.n][state.ind];
+    p.setAttribute("class", "u " + klass(v, br) + (p.dataset.n === state.sel ? " sel" : ""));
+  });
+  const sel = svg.querySelector(".u.sel"); if (sel) sel.parentNode.appendChild(sel);
+  const ind = IND[state.ind];
+  $("#maptitle").innerHTML = esc(ind.name) + `<span>${esc(ind.unit)} · ${esc(D.axes[ind.axis].short)} 축 · ${esc(ind.cycle)} 갱신</span>`;
+  const lab = [br.vals[0], ...br.q].map(v => fmt(state.ind, v));
+  const layerLg = [];
+  if (state.layers.zone) layerLg.push(D.zones.map(z => `<span class="lg-item"><span class="sw" style="background:${z.color}"></span>${esc(z.name.replace("생활권","")) }</span>`).join(""));
+  $("#legend").innerHTML = `
+    <div><div class="ramp">${[1,2,3,4,5].map(i => `<span style="background:var(--q${i})"></span>`).join("")}</div>
+    <div class="ramp-lab">${lab.map(t => `<span>${t}</span>`).join("")}</div></div>
+    <span class="lg-item"><span class="sw" style="background:url(#);background:repeating-linear-gradient(45deg,var(--na) 0 3px,var(--line) 3px 5px)"></span>자료 없음</span>
+    ${state.layers.road ? '<span class="lg-item"><span class="sw" style="background:none;border-top:2px dashed var(--brt);height:0;width:18px"></span>BRT</span>' : ""}
+    ${layerLg.join("")}`;
+  rank(); detail();
+}
+
+/* 확대 연동 레이어 */
+function k(){ return 900 / vb.w; }
+function drawOverlays(){
+  const kk = k(), fs = 12 / kk, clientW = svg.clientWidth || 900, px = 900 / clientW / kk;
+  const g = s => svg.querySelector(s);
+  // 동 이름: 화면에서 충분히 큰 면만
+  g("#g-names").innerHTML = state.layers.name ? D.shapes.map(s => {
+    const scr = Math.sqrt(s.km2) * (SC / 111 / KX) * kk / px;  // 대략 화면 픽셀 크기
+    if (scr < 34) return "";
+    const nm = s.name.length > 4 ? s.name : s.name;
+    return `<text class="lbl" x="${X(s.label[0]).toFixed(1)}" y="${Y(s.label[1]).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="${(10.5 * px).toFixed(2)}" style="stroke-width:${(3*px).toFixed(2)}px">${esc(nm)}</text>`;
+  }).join("") : "";
+  // 생활권 이름
+  g("#g-zlabels").innerHTML = state.layers.zone ? D.zoneShapes.map(z => {
+    const Z = ZONE[z.id]; if (z.id === "R" && kk > 3.2) return "";
+    const off = z.id === "S" ? -14 : 0;
+    return `<text class="zlbl" x="${X(z.label[0]).toFixed(1)}" y="${(Y(z.label[1]) + off * px).toFixed(1)}" text-anchor="middle" fill="${Z.color}" font-size="${(13 * px).toFixed(2)}" style="stroke-width:${(4*px).toFixed(2)}px">${esc(Z.name)}</text>`;
+  }).join("") : "";
+  // 거점
+  const kinds = D.anchorKinds;
+  g("#g-anchors").innerHTML = state.layers.anchor ? D.anchors.map((a, i) => {
+    const c = kinds[a.kind].color, r = (a.kind === "national" ? 7 : 5.2) * px, x = X(a.lon), y = Y(a.lat);
+    const shape = a.kind === "national"
+      ? `<rect class="an" data-i="${i}" x="${(x - r).toFixed(2)}" y="${(y - r).toFixed(2)}" width="${(2*r).toFixed(2)}" height="${(2*r).toFixed(2)}" transform="rotate(45 ${x.toFixed(2)} ${y.toFixed(2)})" fill="${c}"/>`
+      : `<circle class="an" data-i="${i}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="${c}"/>`;
+    return shape;
+  }).join("") : "";
+  g("#g-anchors").querySelectorAll(".an").forEach(el => {
+    const a = D.anchors[+el.dataset.i];
+    el.addEventListener("mousemove", e => showTip(e, `<b>${esc(a.name)}</b><br>${esc(kinds[a.kind].name)} · ${esc(a.note)}`));
+    el.addEventListener("mouseleave", hideTip);
+  });
+  // 생활권 간 흐름
+  const zc = Object.fromEntries(D.zoneShapes.map(z => [z.id, [X(z.label[0]), Y(z.label[1])]]));
+  const R = zc.R; zc.R = [X(127.286), Y(36.600)];      // 읍면은 조치원에서 잇는다
+  const maxF = Math.max(...D.flows.map(f => f[2]));
+  g("#g-flows").innerHTML = state.layers.flow ? D.flows.map(f => {
+    const a = zc[f[0]], b = zc[f[1]]; if (!a || !b) return "";
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, dx = b[0] - a[0], dy = b[1] - a[1];
+    const cx = mx - dy * .18, cy = my + dx * .18, w = 1 + 11 * f[2] / maxF;
+    return `<path class="fl" d="M${a[0]},${a[1]}Q${cx},${cy} ${b[0]},${b[1]}" stroke-width="${w.toFixed(1)}"/>`;
+  }).join("") : "";
+  zc.R = R;
+  // 광역
+  const maxX = Math.max(...D.external.map(x => x.trips));
+  const cen = [X(127.285), Y(36.505)];
+  g("#g-ext").innerHTML = state.layers.ext ? D.external.map(x => {
+    const p = [X(x.lon), Y(x.lat)], w = 1.5 + 13 * x.trips / maxX;
+    const dx = p[0] - cen[0], dy = p[1] - cen[1];
+    return `<path class="fx" d="M${cen[0]},${cen[1]}Q${cen[0] + dx * .5 - dy * .12},${cen[1] + dy * .5 + dx * .12} ${p[0]},${p[1]}" stroke-width="${w.toFixed(1)}"/>
+      <circle class="xn" cx="${p[0]}" cy="${p[1]}" r="${(6 * px).toFixed(2)}"/>
+      <text class="xlbl" x="${p[0]}" y="${(p[1] - 10 * px).toFixed(2)}" text-anchor="middle" font-size="${(12 * px).toFixed(2)}" style="stroke-width:${(3*px).toFixed(2)}px">${esc(x.name)} ${x.trips}천</text>`;
+  }).join("") : "";
+  svg.querySelector("#g-roads").style.display = state.layers.road ? "" : "none";
+  svg.querySelector("#g-zones").style.display = state.layers.zone ? "" : "none";
+}
+function setVB(b){ vb = b; svg.setAttribute("viewBox", `${b.x.toFixed(2)} ${b.y.toFixed(2)} ${b.w.toFixed(2)} ${b.h.toFixed(2)}`); drawOverlays(); }
+
+/* 확대·이동 */
+let moved = false;
+(function(){
+  svg.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = vb.x + (e.clientX - r.left) / r.width * vb.w, my = vb.y + (e.clientY - r.top) / r.height * vb.h;
+    const f = e.deltaY > 0 ? 1.18 : 1 / 1.18;
+    const w = Math.min(FULL.w * 1.1, Math.max(40, vb.w * f)), h = w * 640 / 900;
+    setVB({x: mx - (mx - vb.x) * w / vb.w, y: my - (my - vb.y) * h / vb.h, w, h});
+  }, {passive:false});
+  let start = null;
+  svg.addEventListener("pointerdown", e => { start = {x:e.clientX, y:e.clientY, vb:Object.assign({}, vb)}; moved = false; });
+  window.addEventListener("pointermove", e => {
+    if (!start) return;
+    const r = svg.getBoundingClientRect(), dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) { moved = true; svg.classList.add("drag"); hideTip(); }
+    if (moved) setVB({x: start.vb.x - dx / r.width * vb.w, y: start.vb.y - dy / r.height * vb.h, w: vb.w, h: vb.h});
+  });
+  window.addEventListener("pointerup", () => { start = null; svg.classList.remove("drag"); setTimeout(() => moved = false, 0); });
+  svg.addEventListener("dblclick", e => {
+    const r = svg.getBoundingClientRect();
+    const mx = vb.x + (e.clientX - r.left) / r.width * vb.w, my = vb.y + (e.clientY - r.top) / r.height * vb.h;
+    const w = Math.max(40, vb.w / 1.8), h = w * 640 / 900; setVB({x: mx - w / 2, y: my - h / 2, w, h});
+  });
+})();
+
+/* 보기·레이어 칩 */
+function views(){
+  $("#views").innerHTML = Object.entries(VIEWS).map(([id, v]) =>
+    `<button class="chip" type="button" data-v="${id}" aria-pressed="${state.view === id}">${v.name}</button>`).join("");
+  $("#views").querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+    state.view = b.dataset.v; store.set("view", state.view);
+    if (state.view === "region") { state.layers.ext = true; store.set("layers", state.layers); rail(); }
+    setVB(Object.assign({}, VIEWS[state.view].box)); views();
+  }));
+}
+
+/* 왼쪽 레일 */
+const LAYERS = [["zone","생활권 경계"],["anchor","거점"],["flow","생활권 간 흐름"],["ext","광역 흐름"],["road","간선·BRT"],["name","동 이름"]];
+function rail(){
+  let h = "";
+  for (const ax of ["A","B","C"]) {
+    h += `<div class="axis-h"><i>${ax}</i>${esc(D.axes[ax].name)}</div>`;
+    h += D.indicators.filter(i => i.axis === ax).map(i =>
+      `<button class="ind" type="button" data-i="${i.id}" aria-pressed="${state.ind === i.id}"><span>${esc(i.name)}</span><span class="u">${esc(i.unit)}</span></button>`).join("");
+  }
+  h += `<h4 style="margin-top:14px">지도 위 겹</h4><div class="chips">` + LAYERS.map(([k2, n]) =>
+    `<button class="chip" type="button" data-l="${k2}" aria-pressed="${!!state.layers[k2]}">${n}</button>`).join("") + `</div>`;
+  h += `<h4>거점 범례</h4><div class="small" style="display:grid;gap:3px">` + Object.values(D.anchorKinds).map(k2 =>
+    `<span class="lg-item"><span class="dot" style="background:${k2.color};${k2.diamond ? "border-radius:1px;transform:rotate(45deg) scale(.85)" : ""}"></span>${esc(k2.name)}</span>`).join("") + `</div>`;
+  $("#rail").innerHTML = h;
+  $("#rail").querySelectorAll(".ind").forEach(b => b.addEventListener("click", () => setInd(b.dataset.i)));
+  $("#rail").querySelectorAll("[data-l]").forEach(b => b.addEventListener("click", () => {
+    state.layers[b.dataset.l] = !state.layers[b.dataset.l]; store.set("layers", state.layers);
+    b.setAttribute("aria-pressed", state.layers[b.dataset.l]); drawOverlays(); paint();
+  }));
+}
+function setInd(id, scroll){
+  state.ind = id; store.set("ind", id);
+  $("#rail").querySelectorAll(".ind").forEach(b => b.setAttribute("aria-pressed", b.dataset.i === id));
+  paint();
+  if (scroll) $("#bench-sec").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+}
+function select(n){
+  state.sel = state.sel === n ? null : n; store.set("sel", state.sel); paint();
+}
+
+/* 툴팁 */
+const tip = $("#tip");
+function showTip(e, html){
+  const r = $("#mapbox").getBoundingClientRect();
+  tip.innerHTML = html; tip.hidden = false;
+  let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+  if (x + 260 > r.width) x = e.clientX - r.left - 270;
+  tip.style.left = Math.max(4, x) + "px"; tip.style.top = y + "px";
+}
+function hideTip(){ tip.hidden = true; }
+function unitTip(n){
+  const u = UNITS[n], z = ZONE[u.zone], ind = IND[state.ind];
+  return `<b>${esc(n)}</b> · ${esc(z.name)}<br>${esc(ind.name)}: <b>${fmt(state.ind, u[state.ind])}</b> ${esc(ind.unit)}`;
+}
+
+/* 순위 */
+function rankOf(id, n){
+  const vals = NAMES.filter(x => UNITS[x][id] != null).sort((a, b) => UNITS[b][id] - UNITS[a][id]);
+  return {pos: vals.indexOf(n) + 1, total: vals.length};
+}
+function rank(){
+  const ind = IND[state.ind];
+  const rows = NAMES.filter(n => UNITS[n][state.ind] != null).sort((a, b) => UNITS[b][state.ind] - UNITS[a][state.ind]);
+  const vmax = Math.max(...rows.map(n => Math.abs(UNITS[n][state.ind]))) || 1;
+  const miss = NAMES.length - rows.length;
+  $("#rank-h").textContent = ind.name + " — 읍면동 순위";
+  $("#rank-note").textContent = ind.calc + (miss ? ` · 자료 없는 ${miss}곳 제외` : "");
+  $("#rank").innerHTML = rows.map(n => {
+    const v = UNITS[n][state.ind], z = ZONE[UNITS[n].zone];
+    const w = Math.max(1, Math.abs(v) / vmax * 100);
+    return `<div class="rrow${n === state.sel ? " sel" : ""}" data-n="${esc(n)}"><span class="rn">${esc(n)}</span>
+      <span><span class="rb" style="display:block;width:${w}%;background:${z.color};opacity:${v < 0 ? .45 : .85}"></span></span>
+      <span class="rv">${fmt(state.ind, v)}</span></div>`;
+  }).join("");
+  $("#rank").querySelectorAll(".rrow").forEach(r => r.addEventListener("click", () => select(r.dataset.n)));
+}
+
+/* 오른쪽 상세 */
+function detail(){
+  const ind = IND[state.ind];
+  const el = $("#detail");
+  if (!state.sel) {
+    const rows = NAMES.filter(n => UNITS[n][state.ind] != null).sort((a, b) => UNITS[b][state.ind] - UNITS[a][state.ind]);
+    const good = ind.good;
+    const li = arr => arr.map(n => `<li data-n="${esc(n)}"><span>${esc(n)} <span class="muted small">${esc(ZONE[UNITS[n].zone].name)}</span></span><span class="num">${fmt(state.ind, UNITS[n][state.ind])}</span></li>`).join("");
+    const hiName = good === -1 ? "가장 나쁜 곳" : good === 1 ? "가장 좋은 곳" : "가장 높은 곳";
+    const loName = good === -1 ? "가장 좋은 곳" : good === 1 ? "가장 부족한 곳" : "가장 낮은 곳";
+    el.innerHTML = `<div class="eyebrow">선택한 지표</div>
+      <div class="dn" style="margin-top:2px">${esc(ind.name)}</div>
+      <p class="small" style="margin:6px 0">${esc(ind.why)}</p>
+      <div class="small muted">산식 — ${esc(ind.calc)}</div>
+      <div class="small muted">자료 — ${esc(apiNames(ind.api))} · ${esc(ind.cycle)}</div>
+      <div class="small muted">근거 — ${esc(theoriesFor(ind.id))}</div>
+      <h4>${hiName}</h4><ul class="rank-list">${li(rows.slice(0, 4))}</ul>
+      <h4>${loName}</h4><ul class="rank-list">${li(rows.slice(-4).reverse())}</ul>
+      <p class="small muted" style="margin-top:10px">지도에서 면을 누르면 그 동의 전체 지표를 볼 수 있습니다.</p>`;
+    el.querySelectorAll("li").forEach(l => l.addEventListener("click", () => select(l.dataset.n)));
+    return;
+  }
+  const n = state.sel, u = UNITS[n], z = ZONE[u.zone], dg = D.diagnosis[u.zone];
+  let h = `<div class="dh"><div><div class="eyebrow">선택한 읍면동</div><div class="dn">${esc(n)}</div></div>
+    <button class="btn" type="button" id="unsel">선택 해제</button></div>
+    <div style="margin:4px 0 6px"><span class="zchip" style="background:${z.color}">${esc(z.name)}</span> <span class="small muted">${esc(z.role)}</span></div>`;
+  if (dg) h += `<div class="small"><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span> ${esc(dg.head)}</div>`;
+  if (z.note) h += `<div class="small muted" style="margin-top:4px">${esc(z.note)}</div>`;
+  for (const ax of ["A","B","C"]) {
+    h += `<h4>${ax} · ${esc(D.axes[ax].short)}</h4><div class="kv">`;
+    for (const i of D.indicators.filter(i2 => i2.axis === ax)) {
+      const v = u[i.id], all = NAMES.map(m => UNITS[m][i.id]).filter(x => x != null);
+      const lo = Math.min(...all), hi = Math.max(...all);
+      const pos = v == null ? null : (hi > lo ? (v - lo) / (hi - lo) * 100 : 50);
+      const rk = v == null ? "" : rankOf(i.id, n);
+      h += `<span class="k${i.id === state.ind ? " on" : ""}" data-i="${i.id}">${esc(i.name)}</span>
+        <span class="v">${fmt(i.id, v)} <span class="muted" style="font-size:10.5px">${rk ? rk.pos + "/" + rk.total + "위" : ""}</span></span>
+        <span class="bar">${pos == null ? "" : `<b style="width:${pos}%"></b><i style="left:calc(${pos}% - 1px)"></i>`}</span>`;
+    }
+    h += `</div>`;
+  }
+  el.innerHTML = h;
+  $("#unsel").addEventListener("click", () => select(n));
+  el.querySelectorAll(".k").forEach(k2 => k2.addEventListener("click", () => setInd(k2.dataset.i)));
+}
+function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
+function theoriesFor(id){
+  const t = D.theory.filter(t2 => t2.ind.includes(id)).map(t2 => t2.cite.split("(")[0].trim().replace(/,$/, "") + " (" + (t2.cite.match(/\((\d{4})/) || [,""])[1] + ")");
+  return t.length ? t.join(" · ") : "—";
+}
+
+/* ── 생활권 진단 카드 ── */
+function radar(zid){
+  const lq = D.lq[zid]; if (!lq) return "";
+  const cx = 110, cy = 92, R = 62, M = 3.5, n = D.functions.length;
+  const pt = (i, v) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, r = Math.min(v, M) / M * R; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  const plan = D.planned[zid];
+  let s = `<svg class="radar" viewBox="0 0 220 186" aria-hidden="true">`;
+  for (const lv of [1, 2, 3]) s += `<polygon points="${D.functions.map((_, i) => pt(i, lv).join(",")).join(" ")}" fill="none" stroke="var(--line)" stroke-width="${lv === 1 ? 1.2 : .7}" ${lv === 1 ? 'stroke-dasharray="3 2"' : ""}/>`;
+  D.functions.forEach((f, i) => {
+    const e = pt(i, M), l = pt(i, M + .75);
+    s += `<line x1="${cx}" y1="${cy}" x2="${e[0]}" y2="${e[1]}" stroke="${i === plan ? "var(--ink)" : "var(--line)"}" stroke-width="${i === plan ? 2 : .7}"/>`;
+    s += `<text x="${l[0]}" y="${l[1]}" text-anchor="middle" dominant-baseline="middle" style="${i === plan ? "font-weight:700;fill:var(--ink)" : ""}">${esc(f)}</text>`;
+  });
+  const c = ZONE[zid].color;
+  s += `<polygon points="${lq.map((v, i) => pt(i, v).join(",")).join(" ")}" fill="${c}" fill-opacity=".25" stroke="${c}" stroke-width="1.8"/>`;
+  if (plan != null) { const p = pt(plan, lq[plan]); s += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}" stroke="var(--panel)" stroke-width="1.2"/>`; }
+  return s + `</svg>`;
+}
+function zoneStats(zid){
+  const names = NAMES.filter(n => UNITS[n].zone === zid);
+  const pop = names.reduce((a, n) => a + (UNITS[n].pop || 0), 0);
+  const wavg = id => { let s = 0, w = 0; for (const n of names) { const v = UNITS[n][id], p = UNITS[n].pop || 0; if (v != null && p) { s += v * p; w += p; } } return w ? s / w : null; };
+  return {pop, svc: wavg("svc"), vac: wavg("vac"), old: wavg("old")};
+}
+(function(){
+  $("#zones").innerHTML = D.zones.map(z => {
+    const dg = D.diagnosis[z.id], st = zoneStats(z.id);
+    return `<div class="zc" data-z="${z.id}" tabindex="0" role="button" aria-label="${esc(z.name)} 지도에서 보기">
+      <div class="zt"><span class="zn"><i style="background:${z.color}"></i>${esc(z.name)}</span><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span></div>
+      <div class="role">계획기능 — ${esc(z.role)}</div>
+      ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">거주·사업체가 거의 없어<br>특화도를 계산하지 않습니다.</div>'}
+      <h3>${esc(dg.head)}</h3><p>${esc(dg.body)}</p>
+      <div class="stats"><div>인구<b>${st.pop ? (st.pop / 10000).toFixed(1) + "만" : "—"}</b></div>
+        <div>15분 서비스<b>${st.svc == null ? "—" : st.svc.toFixed(1) + "/8"}</b></div>
+        <div>상가 공실<b>${st.vac == null ? "—" : Math.round(st.vac) + "%"}</b></div></div></div>`;
+  }).join("");
+  $("#zones").querySelectorAll(".zc").forEach(c => {
+    const go = () => {
+      const zs = D.zoneShapes.find(z => z.id === c.dataset.z);
+      const xs = zs.rings.flat().map(p => p[0]), ys = zs.rings.flat().map(p => p[1]);
+      const pad = .012;
+      setVB(boxOf(Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) + pad, Math.max(...ys) + pad));
+      state.layers.zone = true; drawOverlays();
+      $("#bench-sec").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    };
+    c.addEventListener("click", go); c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+})();
+
+/* ── 연계 ── */
+(function(){
+  const ids = D.zones.map(z => z.id);
+  const m = {}; ids.forEach(a => ids.forEach(b => m[a + b] = 0));
+  D.flows.forEach(([a, b, v]) => { m[a + b] += v; m[b + a] += v; });
+  const mx = Math.max(...D.flows.map(f => f[2]));
+  let h = `<tr><th></th>${ids.map(i => `<th style="color:${ZONE[i].color}">${esc(ZONE[i].name.replace("생활권","").replace("읍면지역","읍면"))}</th>`).join("")}</tr>`;
+  ids.forEach(a => {
+    h += `<tr><th style="color:${ZONE[a].color}">${esc(ZONE[a].name.replace("읍면지역","읍면"))}</th>` + ids.map(b => {
+      if (a === b) return `<td style="background:var(--panel2)"></td>`;
+      const v = m[a + b], t = v / mx;
+      const bg = v ? `background:color-mix(in srgb, var(--q4) ${Math.round(t * 85)}%, transparent);${t > .55 ? "color:var(--panel)" : ""}` : "color:var(--ink3)";
+      return `<td style="${bg}">${v || "·"}</td>`;
+    }).join("") + `</tr>`;
+  });
+  $("#matrix").innerHTML = h;
+  const tot = D.flows.reduce((a, f) => a + f[2], 0);
+  const by = {}; D.flows.forEach(([a, b, v]) => { by[a] = (by[a] || 0) + v; by[b] = (by[b] || 0) + v; });
+  const weakest = ["4","5","6"].map(i => `${ZONE[i].name} ${by[i] || 0}`).join(" · ");
+  $("#mx-note").textContent = `생활권 간 통행 합 ${tot}천/일. 순환 구조의 동쪽 절반 — ${weakest}(천/일, 연결된 통행 합) — 이 가장 약합니다.`;
+  const maxX = Math.max(...D.external.map(x => x.trips));
+  $("#xbars").innerHTML = D.external.map(x => {
+    const sp = D.externalSplit[x.id] || {}; const s = Object.values(sp).reduce((a, v) => a + v, 0) || 1;
+    return `<div class="xb"><span>${esc(x.name)}</span><span class="t" style="width:${x.trips / maxX * 100}%">${
+      Object.entries(sp).filter(e => e[1] > 0).map(([z, v]) => `<span title="${esc(ZONE[z].name)} ${v}천" style="width:${v / s * 100}%;background:${ZONE[z].color}"></span>`).join("")}</span><span class="v">${x.trips}천</span></div>`;
+  }).join("");
+})();
+
+/* ── 이론 ── */
+function chipsFor(ids){ return ids.map(i => IND[i] ? `<button class="ichip" type="button" data-i="${i}">${esc(IND[i].name)}</button>` : "").join(""); }
+$("#theory").innerHTML = D.theory.map(t => `
+  <div class="th"><div class="g"><b>${esc(t.scope)}</b>${esc(t.group)}</div>
+    <div><div class="c">${esc(t.cite)}</div><div class="i">${esc(t.idea)}</div><div class="us">${esc(t.use)}</div><div>${chipsFor(t.ind)}</div></div></div>`).join("");
+
+/* ── 개선방향 ── */
+$("#strat").innerHTML = ["A","B","C"].map(ax => `<div class="scol"><h3><i>${ax}</i>${esc(D.axes[ax].name)}</h3>` +
+  D.strategy.filter(s => s.axis === ax).map(s => `<div class="st"><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>
+    <div class="basis">근거 — ${s.basis.map(b => THEORY[b] ? esc(THEORY[b].cite.split(/[(.]/)[0].trim().replace(/,$/, "")) : "").join(" · ")}</div>
+    <div>${chipsFor(s.ind)}</div></div>`).join("") + `</div>`).join("");
+$("#cases").innerHTML = D.cases.map(c => `<div class="case"><b>${esc(c.name)}</b><p>${esc(c.what)}</p><p class="ls">${esc(c.lesson)}</p></div>`).join("");
+document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () => setInd(b.dataset.i, true)));
+
+/* ── 자료원 ── */
+(function(){
+  const st = D.apiStatus;
+  $("#apis").innerHTML = `<tr><th>자료</th><th>호출 주소</th><th>주기</th><th>쓰는 지표</th><th>상태</th></tr>` + D.apis.map(a => {
+    const s = st[a.status];
+    return `<tr><td><b>${esc(a.name)}</b><div class="small muted">${esc(a.host)}</div></td><td><code>${esc(a.url)}</code></td>
+      <td>${esc(a.cycle)}</td><td>${a.ind.map(i => IND[i] ? esc(IND[i].name) : "").join(", ")}</td>
+      <td><span class="pill ${s.cls}">${esc(s.name)}</span></td></tr>`;
+  }).join("");
+  const n403 = D.apis.filter(a => a.status === "403").length;
+  $("#api-note").textContent = `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403). 승인되면 python run.py --collect 한 번으로 실측이 들어갑니다.`;
+  $("#foot-src").textContent = "샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호, 도시공간구조는 2040 세종 도시기본계획 기준입니다.";
+})();
+
+/* 시작 */
+build(); rail(); views(); setVB(vb); paint();
+window.addEventListener("resize", () => drawOverlays());
+})();
+</script>

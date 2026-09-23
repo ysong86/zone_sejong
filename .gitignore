@@ -1,0 +1,5 @@
+config.json
+data/raw/
+data/latest.json
+__pycache__/
+*.pyc
