@@ -263,7 +263,7 @@ footer p{margin:0;max-width:90ch}
 <div class="brief">
   <div class="lead">
     <div class="q">"6개 생활권 체계가 지금의 도시기능과 앞으로의 국가계획을 담고 있는가?"</div>
-    <p>행복도시는 중앙녹지를 비워 두고 둘레에 여섯 개의 <b>기능 생활권</b>을 배치했습니다. 20년이 지나며 국회세종의사당·대통령 세종집무실 같은 국가중추기능이 새로 들어오고, 2040 도시기본계획은 시 전체를 다른 생활권 체계(1대·4중생활권)로 나눴습니다. 대전·청주와의 광역 관계도 달라졌습니다.</p>
+    <p>행복도시는 중앙녹지를 비워 두고 둘레에 여섯 개의 <b>기능 생활권</b>을 배치했습니다. 20년이 지나며 국회세종의사당·대통령 세종집무실 같은 국가중추기능이 새로 들어오고, 세종시는 읍면까지 포함한 시 전체를 행복도시와 다른 생활권 체계로 나눠 보고 있습니다. 대전·청주와의 광역 관계도 달라졌습니다.</p>
     <p class="small muted">그래서 이 상황판은 경계 조정을 출발점으로 삼지 않습니다. 아래 세 축으로 먼저 진단하고, 축마다 국내외 이론에 근거한 지표를 붙였습니다.</p>
   </div>
   <div class="axes" id="axes"></div>
@@ -827,7 +827,7 @@ $("#theory").innerHTML = D.theory.map(t => `
 /* ── 개선방향 ── */
 $("#strat").innerHTML = ["A","B","C"].map(ax => `<div class="scol"><h3><i>${ax}</i>${esc(D.axes[ax].name)}</h3>` +
   D.strategy.filter(s => s.axis === ax).map(s => `<div class="st"><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>
-    <div class="basis">근거 — ${s.basis.map(b => THEORY[b] ? esc(THEORY[b].cite.split(/[(.]/)[0].trim().replace(/,$/, "")) : "").join(" · ")}</div>
+    ${s.basis.length ? `<div class="basis">근거 — ${s.basis.map(b => THEORY[b] ? esc(THEORY[b].cite.split(/[(.]/)[0].trim().replace(/,$/, "")) : "").join(" · ")}</div>` : ""}
     <div>${chipsFor(s.ind)}</div></div>`).join("") + `</div>`).join("");
 $("#cases").innerHTML = D.cases.map(c => `<div class="case"><b>${esc(c.name)}</b><p>${esc(c.what)}</p><p class="ls">${esc(c.lesson)}</p></div>`).join("");
 document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () => setInd(b.dataset.i, true)));
@@ -843,7 +843,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   }).join("");
   const n403 = D.apis.filter(a => a.status === "403").length;
   $("#api-note").textContent = `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403). 승인되면 python run.py --collect 한 번으로 실측이 들어갑니다.`;
-  $("#foot-src").textContent = "샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호, 도시공간구조는 2040 세종 도시기본계획 기준입니다.";
+  $("#foot-src").textContent = "샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다.";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */
