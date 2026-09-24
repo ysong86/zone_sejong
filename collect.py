@@ -630,14 +630,11 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             bucket[key][0] += extra
         city = {k: sum(d[k] for d in fz.values()) for k in ("tot", 0, 1, 2, 3, 4, 5)}
         for z, d in fz.items():
-            if d["tot"] < 50000:      # 등재 연면적 5만㎡ 미만이면 비율이 몇 동에 좌우돼 뜻이 없다
-                lq[z] = None
-                floor_out[z] = {"tot": round(d["tot"]), "res": round(d["res"]), "fn": [round(d[i]) for i in range(6)]}
-                continue
+            # 등재 연면적이 5만㎡ 미만이면 몇 동에 좌우된다 — 값은 내되 화면에서 주의를 단다(floor.thin).
             lq[z] = [round((d[i] / d["tot"]) / (city[i] / city["tot"]), 2) if city[i] and d["tot"] else 0
                      for i in range(6)]
             floor_out[z] = {"tot": round(d["tot"]), "res": round(d["res"]),
-                            "fn": [round(d[i]) for i in range(6)]}
+                            "fn": [round(d[i]) for i in range(6)], "thin": d["tot"] < 50000}
         for u, d in fu.items():
             if u in units and d["tot"]:
                 nonres = d["tot"] - d["res"]

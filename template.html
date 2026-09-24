@@ -432,7 +432,7 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
   const cards = [
     {k:"A", big: weak.length + `<small>/ ${lqPlan.length}개 생활권</small>`,
      p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권." +
-        (D.zones.some(z => D.planned[z.id] != null && !D.lq[z.id]) ? " 5생활권은 등재 건물이 거의 없어 계산하지 못했습니다." : ""),
+        (weak.some(x => (D.floor[x.z.id] || {}).thin) ? " (5생활권은 등재 건물이 아직 거의 없습니다.)" : ""),
      ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
     {k:"B", big: Math.round(core / tot * 100) + "<small>%</small>",
      p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중. 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
@@ -822,7 +822,8 @@ function zoneStats(zid){
     return `<div class="zc" data-z="${z.id}" tabindex="0" role="button" aria-label="${esc(z.name)} 지도에서 보기">
       <div class="zt"><span class="zn"><i style="background:${z.color}"></i>${esc(z.name)}</span><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span></div>
       <div class="role">계획기능 — ${esc(z.role)}</div>
-      ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">${D.floor[z.id] ? "건축물대장 등재 연면적이 " + (D.floor[z.id].tot / 10000).toFixed(1) + "만㎡뿐이라" : "건물·사업체가 거의 없어"}<br>특화도를 계산하지 않습니다.</div>'}
+      ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">건물·사업체가 거의 없어<br>특화도를 계산하지 않습니다.</div>'}
+      ${(D.floor[z.id] || {}).thin ? `<div class="small" style="color:var(--warn);text-align:center">주의 — 건축물대장 등재 연면적이 ${(D.floor[z.id].tot / 10000).toFixed(1)}만㎡뿐이라 몇 동의 건물에 좌우되는 값입니다.</div>` : ""}
       <h3>${esc(dg.head)}</h3><p>${esc(dg.body)}</p>
       ${spanU.length ? `<div class="small muted">인구·시설 통계는 ${esc(spanU.join("·"))} 행정동(${esc(ZONE[UNITS[spanU[0]].zone].name)})에 합산돼 따로 뗄 수 없습니다.</div>` : ""}
       <div class="stats"><div>인구<b>${st.pop ? (st.pop / 10000).toFixed(1) + "만" : "—"}</b></div>
