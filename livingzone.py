@@ -118,10 +118,69 @@ _ROWS = {
 }
 
 
+# ── 지도 단위 = 행정동 ────────────────────────────────────────────────
+# 주민등록 인구·연령 통계가 행정동 단위로 나오므로 지도도 행정동으로 칠한다.
+# legal = 그 행정동이 관할하는 법정동(지도 면을 합친다). codes = 행안부 admmCd.
+# 행정동 경계가 생활권 경계와 어긋나는 곳이 있다 — 집현동 행정동은
+# 4생활권(집현)과 5생활권(합강·다솜·용호)을 함께 관할한다(2026.7.20 반곡동에서 분동).
+ADMIN = [
+    {"name": "조치원읍", "codes": ["3611025000"], "legal": ["조치원읍"], "zone": "R"},
+    {"name": "연기면", "codes": ["3611031000"], "legal": ["연기면"], "zone": "R"},
+    {"name": "연동면", "codes": ["3611032000"], "legal": ["연동면"], "zone": "R"},
+    {"name": "부강면", "codes": ["3611033000"], "legal": ["부강면"], "zone": "R"},
+    {"name": "금남면", "codes": ["3611034000"], "legal": ["금남면"], "zone": "R"},
+    {"name": "장군면", "codes": ["3611035000"], "legal": ["장군면"], "zone": "R"},
+    {"name": "연서면", "codes": ["3611036000"], "legal": ["연서면"], "zone": "R"},
+    {"name": "전의면", "codes": ["3611037000"], "legal": ["전의면"], "zone": "R"},
+    {"name": "전동면", "codes": ["3611038000"], "legal": ["전동면"], "zone": "R"},
+    {"name": "소정면", "codes": ["3611039000"], "legal": ["소정면"], "zone": "R"},
+    {"name": "고운동", "codes": ["3611055000"], "legal": ["고운동"], "zone": "1"},
+    {"name": "아름동", "codes": ["3611053000"], "legal": ["아름동"], "zone": "1"},
+    {"name": "종촌동", "codes": ["3611054000"], "legal": ["종촌동"], "zone": "1"},
+    {"name": "도담·어진동", "codes": ["3611052000", "3611052300"], "legal": ["도담동"], "zone": "1",
+     "note": "OSM 에 어진동 경계가 없어 도담동과 합쳐 칠합니다(인구도 두 행정동 합)."},
+    {"name": "다정동", "codes": ["3611058000"], "legal": ["다정동"], "zone": "2"},
+    {"name": "새롬동", "codes": ["3611051500"], "legal": ["새롬동"], "zone": "2",
+     "note": "세종동(S생활권)도 새롬동 행정동 관할이지만 거주인구가 거의 없어 따로 그립니다."},
+    {"name": "한솔동", "codes": ["3611051000"], "legal": ["한솔동"], "zone": "2",
+     "note": "가람동을 포함합니다."},
+    {"name": "나성동", "codes": ["3611051800"], "legal": ["나성동"], "zone": "2"},
+    {"name": "대평동", "codes": ["3611057000"], "legal": ["대평동"], "zone": "3"},
+    {"name": "보람동", "codes": ["3611056000"], "legal": ["보람동"], "zone": "3"},
+    {"name": "소담동", "codes": ["3611055500"], "legal": ["소담동"], "zone": "3"},
+    {"name": "반곡동", "codes": ["3611055600"], "legal": ["반곡동"], "zone": "4"},
+    {"name": "집현동", "codes": ["3611055800"], "legal": ["집현동", "합강동", "다솜동", "용호동"],
+     "zone": "4", "span": ["4", "5"],
+     "note": "4생활권(집현)과 5생활권(합강·다솜·용호)을 함께 관할하는 행정동입니다. 2026년 7월 반곡동에서 분동했습니다."},
+    {"name": "해밀동", "codes": ["3611052500"], "legal": ["해밀동", "산울동", "누리동", "한별동"], "zone": "6",
+     "note": "6생활권의 법정동 넷(해밀·산울·누리·한별)을 모두 관할합니다."},
+    {"name": "세종동", "codes": [], "legal": ["세종동"], "zone": "S",
+     "note": "국가상징구역 예정지. 새롬동 행정동 관할이며 거주인구가 거의 없습니다."},
+]
+ADMIN_ZONE = {a["name"]: a["zone"] for a in ADMIN}
+# 1년 전(분동 전)과 비교할 때 한 묶음으로 봐야 하는 행정동
+CHG_GROUPS = [["반곡동", "집현동"]]
+
+
 def sample_units() -> dict:
-    zone_of = {u: z["id"] for z in ZONES for u in z["units"]}
-    return {name: {"zone": zone_of[name], **dict(zip(_COLS, row))}
-            for name, row in _ROWS.items()}
+    """법정동 샘플 행을 행정동 단위로 묶는다(인구 가중 평균, 인구는 합)."""
+    out = {}
+    for a in ADMIN:
+        rows = [dict(zip(_COLS, _ROWS[n])) for n in a["legal"]]
+        pops = [r["pop"] or 0 for r in rows]
+        agg = {}
+        for c in _COLS:
+            vals = [(r[c], p) for r, p in zip(rows, pops) if r[c] is not None]
+            if not vals:
+                agg[c] = None
+            elif c == "pop":
+                agg[c] = sum(v for v, _ in vals)
+            else:
+                w = sum(p for _, p in vals)
+                agg[c] = round(sum(v * p for v, p in vals) / w, 2) if w else vals[0][0]
+        agg.update({"zone": a["zone"], "hh": None, "dens": None})
+        out[a["name"]] = agg
+    return out
 
 
 # ── 지표 정의 ─────────────────────────────────────────────────────────
@@ -134,33 +193,42 @@ INDICATORS = [
     {"id": "chg", "axis": "A", "name": "인구 증감률(1년)", "unit": "%", "good": 0, "fmt": "pct1",
      "calc": "(이번 달 - 12개월 전) / 12개월 전", "api": "mois_pop", "cycle": "월",
      "why": "성숙 생활권의 정체와 신규 생활권의 급증이 동시에 일어나는지 봅니다."},
-    {"id": "old", "axis": "A", "name": "고령인구 비중", "unit": "%", "good": -1, "fmt": "pct1",
-     "calc": "65세 이상 / 전체", "api": "mois_age", "cycle": "월",
+    {"id": "old", "axis": "A", "name": "60세 이상 비중", "unit": "%", "good": -1, "fmt": "pct1",
+     "calc": "60세 이상 / 전체 (통계가 10세 단위라 65세로 자를 수 없음)", "api": "mois_age", "cycle": "월",
      "why": "초기 입주 생활권의 동시 고령화 — 같은 시기에 입주해 같이 늙습니다."},
-    {"id": "kid", "axis": "A", "name": "유소년 비중", "unit": "%", "good": 0, "fmt": "pct1",
-     "calc": "0~14세 / 전체", "api": "mois_age", "cycle": "월",
-     "why": "학교·돌봄 수요가 생활권마다 얼마나 다른지 봅니다."},
+    {"id": "hh", "axis": "A", "name": "세대당 인구", "unit": "명", "good": 0, "fmt": "x2",
+     "calc": "주민등록 인구 / 세대 수", "api": "mois_pop", "cycle": "월",
+     "why": "1~2인 세대가 많은 곳과 가족 세대가 많은 곳은 필요한 생활서비스가 다릅니다."},
+    {"id": "kid", "axis": "A", "name": "0~19세 비중", "unit": "%", "good": 0, "fmt": "pct1",
+     "calc": "0~19세 / 전체", "api": "mois_age", "cycle": "월",
+     "why": "학교·학원·돌봄 수요가 생활권마다 얼마나 다른지 봅니다."},
     {"id": "jhr", "axis": "A", "name": "직주비", "unit": "배", "good": 0, "fmt": "x2",
      "calc": "종사자 수 / 생산가능인구(15~64세)", "api": "sgis", "cycle": "연",
      "why": "1을 크게 넘으면 일자리 중심, 한참 밑이면 잠자리 생활권입니다."},
     {"id": "mix", "axis": "A", "name": "기능혼합도", "unit": "0~1", "good": 1, "fmt": "x2",
-     "calc": "업종 대분류 점포 수의 정규화 엔트로피", "api": "sbiz", "cycle": "분기",
+     "calc": "상가 업종 대분류(10종) 점포 수의 정규화 엔트로피", "api": "sbiz", "cycle": "분기",
      "why": "한 생활권 안에서 여러 기능이 섞이는지(Jacobs, 3D의 Diversity) 봅니다."},
+    {"id": "dens", "axis": "A", "name": "인구 1천 명당 점포", "unit": "곳", "good": 0, "fmt": "x1",
+     "calc": "상가 점포 수 / 주민등록 인구 × 1,000", "api": "sbiz+mois_pop", "cycle": "분기",
+     "why": "상업이 주민 수요를 넘어 몰린 곳(광역 중심)과 모자란 곳(잠자리 생활권)을 가릅니다."},
+    {"id": "med", "axis": "A", "name": "인구 1만 명당 의사", "unit": "명", "good": 0, "fmt": "x1",
+     "calc": "그 행정동에 있는 병·의원(치과·한의 포함) 의사 수 / 주민등록 인구 × 10,000", "api": "hira+mois_pop", "cycle": "월",
+     "why": "의료 기능이 계획(5생활권 의료·복지)과 달리 어디에 실제로 모였는지 봅니다."},
     {"id": "vac", "axis": "A", "name": "상가 공실 추정", "unit": "%", "good": -1, "fmt": "pct0",
      "calc": "상권별 공실률을 생활권에 배분(부동산원) + 상가정보 폐업 추세 보정", "api": "reb", "cycle": "분기",
      "why": "계획된 중심상가 총량이 실제 수요를 넘었는지 봅니다."},
     {"id": "pub", "axis": "C", "name": "공공·연구 종사자 비중", "unit": "%", "good": 0, "fmt": "pct0",
      "calc": "공공행정·연구개발 종사자 / 전체 종사자", "api": "kosis", "cycle": "연",
      "why": "국가중추기능이 어디에 몰려 있고 어떻게 퍼지는지 봅니다."},
-    {"id": "svc", "axis": "B", "name": "15분 생활서비스", "unit": "종/8", "good": 1, "fmt": "int",
-     "calc": "도보 15분(1.2km) 안에 있는 필수 서비스 종류 수 — 식료품·의원·약국·어린이집·초등학교·도서관·공원·체육",
-     "api": "sbiz+hira+neis+std", "cycle": "분기",
+    {"id": "svc", "axis": "B", "name": "15분 생활서비스", "unit": "종/8", "good": 1, "fmt": "x1",
+     "calc": "시가지 격자점(120m)마다 직선 1km(우회 1.25배 시 도보 15분) 안에 있는 생활서비스 종류 수의 평균 — 식료품·편의점 / 의원 / 약국 / 음식점 / 카페 / 학원 / 미용·세탁 / 운동시설",
+     "api": "sbiz", "cycle": "분기",
      "why": "Moreno 의 15분 도시 기준으로 생활권이 스스로 채워지는지 봅니다."},
     {"id": "bus", "axis": "B", "name": "정류장 400m 커버리지", "unit": "%", "good": 1, "fmt": "pct0",
-     "calc": "정류장 400m 반경 안의 거주인구 비중", "api": "tago", "cycle": "분기",
+     "calc": "시가지 격자점 가운데 버스정류장 400m 안에 드는 비율", "api": "tago", "cycle": "분기",
      "why": "근린주구(Perry)의 도보 반경으로 대중교통 접근을 봅니다."},
-    {"id": "brt", "axis": "B", "name": "BRT 정류장까지 도보", "unit": "분", "good": -1, "fmt": "int",
-     "calc": "인구가중 최근접 BRT 정류장 도보시간(4km/h)", "api": "tago", "cycle": "분기",
+    {"id": "brt", "axis": "B", "name": "BRT 정류장까지 도보", "unit": "분", "good": -1, "fmt": "x1",
+     "calc": "시가지 격자점에서 가장 가까운 BRT 정류장까지 직선거리 × 1.25 ÷ 4km/h 의 평균", "api": "tago", "cycle": "분기",
      "why": "생활권을 잇는 순환 BRT 에 얼마나 쉽게 오르는지 봅니다."},
     {"id": "inter", "axis": "B", "name": "다른 생활권 통행 비중", "unit": "%", "good": 0, "fmt": "pct0",
      "calc": "출발 통행 중 다른 생활권 도착 비중(읍면은 행복도시로 가는 비중)", "api": "ktdb", "cycle": "연",
@@ -343,15 +411,15 @@ STRATEGY = [
 # ── 자료원 ────────────────────────────────────────────────────────────
 # status: 403 = 주소 확인, 활용신청만 남음 / key = 별도 키 필요 / file = API 아님
 APIS = [
-    {"id": "mois_pop", "name": "행정안전부 행정동별 주민등록 인구·세대", "host": "공공데이터포털",
+    {"id": "mois_pop", "name": "행정안전부 행정동별(통반단위) 주민등록 인구 및 세대현황", "host": "공공데이터포털",
      "url": "apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus",
-     "status": "403", "cycle": "월", "ind": ["pop", "chg"]},
-    {"id": "mois_age", "name": "행정안전부 행정동별 성·연령별 주민등록 인구", "host": "공공데이터포털",
+     "status": "403", "cycle": "월", "ind": ["pop", "chg", "hh"]},
+    {"id": "mois_age", "name": "행정안전부 행정동별(통반단위) 성·연령별 주민등록 인구수", "host": "공공데이터포털",
      "url": "apis.data.go.kr/1741000/admmSexdAgePpltn/selectAdmmSexdAgePpltn",
-     "status": "todo", "cycle": "월", "ind": ["old", "kid"]},
+     "status": "403", "cycle": "월", "ind": ["old", "kid"]},
     {"id": "sbiz", "name": "소상공인시장진흥공단 상가(상권)정보", "host": "공공데이터포털",
      "url": "apis.data.go.kr/B553077/api/open/sdsc2/storeListInDong",
-     "status": "403", "cycle": "분기", "ind": ["mix", "svc", "vac"]},
+     "status": "403", "cycle": "분기", "ind": ["mix", "dens", "svc"]},
     {"id": "tago", "name": "국토교통부(TAGO) 버스정류소 정보", "host": "공공데이터포털",
      "url": "apis.data.go.kr/1613000/BusSttnInfoInqireService/getSttnNoList (세종 cityCode=12)",
      "status": "403", "cycle": "분기", "ind": ["bus", "brt"]},
@@ -360,7 +428,7 @@ APIS = [
      "status": "403", "cycle": "월", "ind": ["apt"]},
     {"id": "hira", "name": "건강보험심사평가원 병원정보", "host": "공공데이터포털",
      "url": "apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList",
-     "status": "403", "cycle": "월", "ind": ["svc"]},
+     "status": "403", "cycle": "월", "ind": ["svc", "med"]},
     {"id": "bld", "name": "국토교통부 건축HUB 건축물대장(용도별 연면적)", "host": "공공데이터포털",
      "url": "apis.data.go.kr/1613000/BldRgstHubService",
      "status": "todo", "cycle": "월", "ind": ["mix"]},

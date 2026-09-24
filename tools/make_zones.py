@@ -20,7 +20,7 @@ from shapely.ops import unary_union
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
-from livingzone import ZONES  # noqa: E402
+from livingzone import ZONES, ADMIN  # noqa: E402
 
 SRC = os.path.join(HERE, "assets", "sejong_admin.json")
 OUT = os.path.join(HERE, "assets", "sejong_zones.json")
@@ -71,18 +71,24 @@ def clean_units(admin):
 def main():
     admin = json.load(open(SRC, encoding="utf-8"))
     shapes, kinds = clean_units(admin)
+    # 지도 단위는 행정동 — 관할 법정동 면을 합친다.
     units = []
-    for name, g in shapes.items():
-        p = g.representative_point() if g.area < 0.0008 or name in ("나성동", "세종동") else g.centroid
+    for a in ADMIN:
+        g = unary_union([shapes[n].buffer(0.0003) for n in a["legal"]]).buffer(-0.0003)
+        p = g.representative_point() if g.area < 0.0008 or a["name"] in ("나성동", "세종동") else g.centroid
         if not g.contains(p):
             p = g.representative_point()
-        units.append({"name": name, "kind": kinds[name], "rings": rings_of(g),
+        units.append({"name": a["name"], "kind": kinds[a["legal"][0]], "rings": rings_of(g),
                       "label": [round(p.x, 6), round(p.y, 6)],
                       "km2": round(g.area * 111.0 * 111.0 * 0.8036, 2)})
-        print(f"{name:6s} {units[-1]['km2']:8.2f} km2  label {units[-1]['label']}")
-    json.dump({"_source": "OSM 행정경계(sejong_admin.json)를 겹침 정리한 것(tools/make_zones.py)",
+        print(f"{a['name']:8s} {units[-1]['km2']:8.2f} km2")
+    json.dump({"_source": "OSM 행정경계(sejong_admin.json)를 겹침 정리하고 행정동 단위로 합친 것(tools/make_zones.py)",
                "outline": admin["outline"], "units": units},
               open(os.path.join(HERE, "assets", "sejong_units.json"), "w", encoding="utf-8"),
+              ensure_ascii=False)
+    # 법정동 면(점포·정류장 위치 판정용이 아니라 참고용)
+    json.dump({n: rings_of(g) for n, g in shapes.items()},
+              open(os.path.join(HERE, "assets", "sejong_legal.json"), "w", encoding="utf-8"),
               ensure_ascii=False)
     out = []
     for z in ZONES:

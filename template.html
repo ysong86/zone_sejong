@@ -81,6 +81,10 @@ section{margin-top:28px}
 .ind:hover{background:var(--panel2)}
 .ind[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
 .ind .u{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.ind .nm{display:inline-flex;align-items:center;gap:5px}
+.lv{font-size:10px;font-weight:700;border-radius:3px;padding:0 4px;line-height:1.5;letter-spacing:.02em}
+.lv.on{background:var(--good-soft);color:var(--good)}
+.lv.off{background:var(--panel2);color:var(--ink3);border:1px dashed var(--line)}
 .axis-h{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:12px;font-weight:700;color:var(--ink2)}
 .axis-h i{font-style:normal;font-family:var(--mono);font-size:11px;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 5px}
 .axis-h:first-child{margin-top:0}
@@ -272,7 +276,7 @@ footer p{margin:0;max-width:90ch}
 <section id="bench-sec">
   <div class="sec-h">
     <h2>지표 지도</h2>
-    <div class="note">왼쪽에서 지표를 고르면 읍면동이 5분위로 칠해집니다. 면을 누르면 오른쪽에 그 동의 전체 지표가 뜹니다. 휠로 확대하고 끌어서 옮깁니다.</div>
+    <div class="note">왼쪽에서 지표를 고르면 행정동 25곳이 5분위로 칠해집니다. 면을 누르면 오른쪽에 그 동의 전체 지표가 뜹니다. 초록 <b>실측</b> 표시가 붙은 지표는 공공 API 로 받은 실제 값입니다. 휠로 확대하고 끌어서 옮깁니다.</div>
   </div>
   <div class="bench">
     <aside class="rail" id="rail"></aside>
@@ -351,7 +355,7 @@ footer p{margin:0;max-width:90ch}
 </section>
 
 <footer>
-  <p>지도: OpenStreetMap 기여자(ODbL) 행정경계·도로를 단순화. OSM 에 어진동·가람동 경계가 없어 각각 도담동·한솔동 면에 포함해 그렸습니다. 생활권 경계는 구성 동을 합친 것이며 법정 경계가 아닙니다.</p>
+  <p>지도: OpenStreetMap 기여자(ODbL) 행정경계·도로를 단순화하고 법정동을 행정동 단위로 합쳤습니다. OSM 에 어진동·가람동 경계가 없어 각각 도담동·한솔동 면에 포함했습니다. 생활권 경계는 구성 법정동을 합친 것이며 법정 경계가 아닙니다. 시가지 격자점은 점포·정류장 300m 안의 120m 격자로, 거주 위치 대용입니다.</p>
   <p id="foot-src"></p>
   <p class="credit">제작: 세종연구원 연구모임(김성표, 안용준, 김흥주, 남영식, 이재민, 송양호, 이자은)</p>
   <!-- 조회수: 물환경·교통 상황판과 같은 hits.sh 배지. loading="lazy" 금지(맨 아래라 요청이 안 나가 깨진 그림으로 보임) -->
@@ -386,10 +390,19 @@ const THEORY = Object.fromEntries(D.theory.map(t => [t.key, t]));
     document.documentElement.setAttribute("data-theme", nxt); store.set("theme", nxt);
   });
 })();
-$("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.meta.built : "자료 기준 " + D.meta.asof + " · 생성 " + D.meta.built;
-if (D.meta.demo) {
+const LIVE = new Set(D.meta.live || []);
+const isLive = id => LIVE.has(id);
+function ymText(ym){ return ym && /^\d{6}$/.test(ym) ? ym.slice(0,4) + "년 " + (+ym.slice(4)) + "월" : (ym || ""); }
+$("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.meta.built : "실측 수집 " + D.meta.collected + " · 화면 생성 " + D.meta.built;
+{
   const n = $("#notice"); n.hidden = false;
-  n.innerHTML = "<b>샘플 자료입니다.</b> 이 화면의 수치는 실제 통계·관측값이 아닙니다. 지표 체계와 화면 구성을 검토하기 위한 예시이며, API 활용신청이 승인되면 실측으로 바뀝니다. 생활권 구성·계획 내용·문헌은 실제 자료입니다.";
+  if (D.meta.demo) {
+    n.innerHTML = "<b>샘플 자료입니다.</b> 이 화면의 수치는 실제 통계·관측값이 아닙니다. 지표 체계와 화면 구성을 검토하기 위한 예시이며, API 활용신청이 승인되면 실측으로 바뀝니다. 생활권 구성·계획 내용·문헌은 실제 자료입니다.";
+  } else {
+    const a = D.meta.asof || {}, c = D.meta.counts || {};
+    const nLive = D.indicators.filter(i => isLive(i.id)).length, nAll = D.indicators.length;
+    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록에서 <span class="lv on">실측</span> 표시가 없는 <span class="lv off">샘플</span> 지표와 생활권 진단의 특화도(방사형 그래프), 통행 흐름은 아직 예시 수치입니다.`;
+  }
 }
 
 /* 형식 */
@@ -400,6 +413,7 @@ function fmt(id, v){
   if (f === "pct1") return v.toFixed(1);
   if (f === "pct0") return Math.round(v).toString();
   if (f === "x2") return v.toFixed(2);
+  if (f === "x1") return v.toFixed(1);
   return String(v);
 }
 function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만원" || u === "분" || u === "%" || u === "배" ? u : ""; }
@@ -514,7 +528,8 @@ function paint(){
   });
   const sel = svg.querySelector(".u.sel"); if (sel) sel.parentNode.appendChild(sel);
   const ind = IND[state.ind];
-  $("#maptitle").innerHTML = esc(ind.name) + `<span>${esc(ind.unit)} · ${esc(D.axes[ind.axis].short)} 축 · ${esc(ind.cycle)} 갱신</span>`;
+  const src = D.meta.demo ? "샘플" : isLive(state.ind) ? "실측 · " + srcAsof(ind.api) : "샘플";
+  $("#maptitle").innerHTML = esc(ind.name) + `<span>${esc(ind.unit)} · ${esc(D.axes[ind.axis].short)} 축 · ${esc(src)}</span>`;
   const lab = [br.vals[0], ...br.q].map(v => fmt(state.ind, v));
   const layerLg = [];
   if (state.layers.zone) layerLg.push(D.zones.map(z => `<span class="lg-item"><span class="sw" style="background:${z.color}"></span>${esc(z.name.replace("생활권","")) }</span>`).join(""));
@@ -630,7 +645,7 @@ function rail(){
   for (const ax of ["A","B","C"]) {
     h += `<div class="axis-h"><i>${ax}</i>${esc(D.axes[ax].name)}</div>`;
     h += D.indicators.filter(i => i.axis === ax).map(i =>
-      `<button class="ind" type="button" data-i="${i.id}" aria-pressed="${state.ind === i.id}"><span>${esc(i.name)}</span><span class="u">${esc(i.unit)}</span></button>`).join("");
+      `<button class="ind" type="button" data-i="${i.id}" aria-pressed="${state.ind === i.id}"><span class="nm">${esc(i.name)}${D.meta.demo ? "" : (isLive(i.id) ? '<span class="lv on">실측</span>' : '<span class="lv off">샘플</span>')}</span><span class="u">${esc(i.unit)}</span></button>`).join("");
   }
   h += `<h4 style="margin-top:14px">지도 위 겹</h4><div class="chips">` + LAYERS.map(([k2, n]) =>
     `<button class="chip" type="button" data-l="${k2}" aria-pressed="${!!state.layers[k2]}">${n}</button>`).join("") + `</div>`;
@@ -717,7 +732,8 @@ function detail(){
     <button class="btn" type="button" id="unsel">선택 해제</button></div>
     <div style="margin:4px 0 6px"><span class="zchip" style="background:${z.color}">${esc(z.name)}</span> <span class="small muted">${esc(z.role)}</span></div>`;
   if (dg) h += `<div class="small"><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span> ${esc(dg.head)}</div>`;
-  if (z.note) h += `<div class="small muted" style="margin-top:4px">${esc(z.note)}</div>`;
+  if (u.note) h += `<div class="small muted" style="margin-top:4px">${esc(u.note)}</div>`;
+  if (u.legal && u.legal.length > 1) h += `<div class="small muted">관할 법정동: ${esc(u.legal.join("·"))}</div>`;
   for (const ax of ["A","B","C"]) {
     h += `<h4>${ax} · ${esc(D.axes[ax].short)}</h4><div class="kv">`;
     for (const i of D.indicators.filter(i2 => i2.axis === ax)) {
@@ -725,7 +741,7 @@ function detail(){
       const lo = Math.min(...all), hi = Math.max(...all);
       const pos = v == null ? null : (hi > lo ? (v - lo) / (hi - lo) * 100 : 50);
       const rk = v == null ? "" : rankOf(i.id, n);
-      h += `<span class="k${i.id === state.ind ? " on" : ""}" data-i="${i.id}">${esc(i.name)}</span>
+      h += `<span class="k${i.id === state.ind ? " on" : ""}" data-i="${i.id}">${esc(i.name)}${D.meta.demo || isLive(i.id) ? "" : ' <span class="lv off">샘플</span>'}</span>
         <span class="v">${fmt(i.id, v)} <span class="muted" style="font-size:10.5px">${rk ? rk.pos + "/" + rk.total + "위" : ""}</span></span>
         <span class="bar">${pos == null ? "" : `<b style="width:${pos}%"></b><i style="left:calc(${pos}% - 1px)"></i>`}</span>`;
     }
@@ -734,6 +750,12 @@ function detail(){
   el.innerHTML = h;
   $("#unsel").addEventListener("click", () => select(n));
   el.querySelectorAll(".k").forEach(k2 => k2.addEventListener("click", () => setInd(k2.dataset.i)));
+}
+function srcAsof(api){
+  const a = D.meta.asof || {};
+  return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
+    sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
+    hira:"병원정보 " + (a.hira || "")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -763,19 +785,21 @@ function zoneStats(zid){
   const names = NAMES.filter(n => UNITS[n].zone === zid);
   const pop = names.reduce((a, n) => a + (UNITS[n].pop || 0), 0);
   const wavg = id => { let s = 0, w = 0; for (const n of names) { const v = UNITS[n][id], p = UNITS[n].pop || 0; if (v != null && p) { s += v * p; w += p; } } return w ? s / w : null; };
-  return {pop, svc: wavg("svc"), vac: wavg("vac"), old: wavg("old")};
+  return {pop, svc: wavg("svc"), med: wavg("med"), old: wavg("old"), names};
 }
 (function(){
   $("#zones").innerHTML = D.zones.map(z => {
     const dg = D.diagnosis[z.id], st = zoneStats(z.id);
+    const spanU = NAMES.filter(n => (UNITS[n].span || []).includes(z.id) && UNITS[n].zone !== z.id);
     return `<div class="zc" data-z="${z.id}" tabindex="0" role="button" aria-label="${esc(z.name)} 지도에서 보기">
       <div class="zt"><span class="zn"><i style="background:${z.color}"></i>${esc(z.name)}</span><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span></div>
       <div class="role">계획기능 — ${esc(z.role)}</div>
       ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">거주·사업체가 거의 없어<br>특화도를 계산하지 않습니다.</div>'}
       <h3>${esc(dg.head)}</h3><p>${esc(dg.body)}</p>
+      ${spanU.length ? `<div class="small muted">인구·시설 통계는 ${esc(spanU.join("·"))} 행정동(${esc(ZONE[UNITS[spanU[0]].zone].name)})에 합산돼 따로 뗄 수 없습니다.</div>` : ""}
       <div class="stats"><div>인구<b>${st.pop ? (st.pop / 10000).toFixed(1) + "만" : "—"}</b></div>
         <div>15분 서비스<b>${st.svc == null ? "—" : st.svc.toFixed(1) + "/8"}</b></div>
-        <div>상가 공실<b>${st.vac == null ? "—" : Math.round(st.vac) + "%"}</b></div></div></div>`;
+        <div>60세 이상<b>${st.old == null ? "—" : st.old.toFixed(1) + "%"}</b></div></div></div>`;
   }).join("");
   $("#zones").querySelectorAll(".zc").forEach(c => {
     const go = () => {
@@ -842,8 +866,11 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
       <td><span class="pill ${s.cls}">${esc(s.name)}</span></td></tr>`;
   }).join("");
   const n403 = D.apis.filter(a => a.status === "403").length;
-  $("#api-note").textContent = `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403). 승인되면 python run.py --collect 한 번으로 실측이 들어갑니다.`;
-  $("#foot-src").textContent = "샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다.";
+  const nOk = D.apis.filter(a => a.status === "ok").length;
+  $("#api-note").textContent = nOk
+    ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
+    : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보.";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */

@@ -30,7 +30,7 @@ API_STATUS = {
     "ok": {"name": "연동됨", "cls": "sok"},
 }
 ROAD_CLASSES = ("expressway", "brt", "arterial")
-PROBED = "2026-09-23"
+PROBED = "2026-09-24"
 
 
 def _load(name):
@@ -60,22 +60,33 @@ def _collected():
 def build_data(demo: bool = True) -> dict:
     units = LZ.sample_units()
     apis = [dict(a) for a in LZ.APIS]
-    asof = None
+    asof, live_ind, counts, collected = {}, [], {}, None
     got = None if demo else _collected()
     if got:
+        live_ind = got.get("live", [])
         for name, vals in got.get("units", {}).items():
             if name in units:
-                units[name].update({k: v for k, v in vals.items() if v is not None})
+                # 실측 지표는 값이 없어도(None) 샘플을 남기지 않는다 — 빈칸이 정직하다.
+                for k in live_ind:
+                    units[name][k] = vals.get(k)
+                for k in ("stores", "docs", "apt_n", "built"):
+                    if k in vals:
+                        units[name][k] = vals[k]
         live = set(got.get("sources", []))
         for a in apis:
             if a["id"] in live:
                 a["status"] = "ok"
-        asof = got.get("asof")
+        asof, counts, collected = got.get("asof", {}), got.get("counts", {}), got.get("collected")
+    admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
+                  for a in LZ.ADMIN}
+    for n, m in admin_meta.items():
+        units[n].update(m)
     geo = _load("sejong_units.json")
     zones = _load("sejong_zones.json")["zones"]
     return {
         "meta": {"demo": not got, "built": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                 "asof": asof, "probed": PROBED},
+                 "asof": asof, "probed": PROBED, "live": live_ind, "counts": counts,
+                 "collected": collected},
         "axes": LZ.AXES,
         "zones": LZ.ZONES,
         "indicators": LZ.INDICATORS,
