@@ -304,7 +304,7 @@ footer p{margin:0;max-width:90ch}
 <section>
   <div class="sec-h">
     <h2>생활권 진단 — 계획기능 대비 실제</h2>
-    <div class="note">방사형 그래프는 여섯 기능의 특화도(LQ, 점선 원 = 세종 평균 1.0)입니다. 굵은 축이 그 생활권에 계획된 기능입니다. 판정: <span class="pill p-keep">유지·고도화</span> <span class="pill p-boost">보강</span> <span class="pill p-shift">전환·재정의</span></div>
+    <div class="note"><span id="lq-src"></span>방사형 그래프는 여섯 기능의 특화도(LQ, 점선 원 = 세종 평균 1.0)입니다. 굵은 축이 그 생활권에 계획된 기능입니다. 판정: <span class="pill p-keep">유지·고도화</span> <span class="pill p-boost">보강</span> <span class="pill p-shift">전환·재정의</span></div>
   </div>
   <div class="zgrid" id="zones"></div>
 </section>
@@ -403,7 +403,7 @@ $("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.me
   } else {
     const a = D.meta.asof || {}, c = D.meta.counts || {};
     const nLive = D.indicators.filter(i => isLive(i.id)).length, nAll = D.indicators.length;
-    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록에서 <span class="lv on">실측</span> 표시가 없는 <span class="lv off">샘플</span> 지표와 생활권 진단의 특화도(방사형 그래프), 통행 흐름은 아직 예시 수치입니다.`;
+    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 건축물 ${(c.buildings||0).toLocaleString("ko-KR")}동, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록의 <span class="lv off">샘플</span> 지표${D.lqLive ? "" : "와 생활권 진단의 특화도(방사형 그래프)"}, 생활권 간·광역 통행 흐름은 아직 예시 수치입니다.`;
   }
 }
 
@@ -422,7 +422,7 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
 
 /* ── 머리 세 축 ── */
 (function(){
-  const lqPlan = D.zones.filter(z => D.planned[z.id] != null)
+  const lqPlan = D.zones.filter(z => D.planned[z.id] != null && D.lq[z.id])
     .map(z => ({z, v: D.lq[z.id][D.planned[z.id]]}));
   const weak = lqPlan.filter(x => x.v < 1);
   const tot = D.flows.reduce((a, f) => a + f[2], 0);
@@ -430,8 +430,9 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
   const xt = D.external.reduce((a, x) => a + x.trips, 0);
   const dj = D.external.find(x => x.id === "dj");
   const cards = [
-    {k:"A", big: weak.length + "<small>/ 6개 생활권</small>",
-     p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권.",
+    {k:"A", big: weak.length + `<small>/ ${lqPlan.length}개 생활권</small>`,
+     p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권." +
+        (D.zones.some(z => D.planned[z.id] != null && !D.lq[z.id]) ? " 5생활권은 등재 건물이 거의 없어 계산하지 못했습니다." : ""),
      ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
     {k:"B", big: Math.round(core / tot * 100) + "<small>%</small>",
      p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중. 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
@@ -778,7 +779,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || "")})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || "")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -787,13 +788,17 @@ function theoriesFor(id){
 }
 
 /* ── 생활권 진단 카드 ── */
+$("#lq-src").innerHTML = D.lqLive
+  ? '<span class="lv on">실측</span> 건축물대장 연면적으로 계산했습니다(정부세종청사 미등재분 ' + Math.round((D.floor._gov_extra || 0) / 10000) + '만㎡ 보정, 초·중·고·학원은 제외). '
+  : '<span class="lv off">샘플</span> ';
 function radar(zid){
   const lq = D.lq[zid]; if (!lq) return "";
-  const cx = 110, cy = 92, R = 62, M = 3.5, n = D.functions.length;
+  const cx = 110, cy = 92, R = 62, n = D.functions.length;
+  const M = Math.max(3, Math.ceil(Math.max(...D.lq[zid]) * 1.05));
   const pt = (i, v) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, r = Math.min(v, M) / M * R; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
   const plan = D.planned[zid];
   let s = `<svg class="radar" viewBox="0 0 220 186" aria-hidden="true">`;
-  for (const lv of [1, 2, 3]) s += `<polygon points="${D.functions.map((_, i) => pt(i, lv).join(",")).join(" ")}" fill="none" stroke="var(--line)" stroke-width="${lv === 1 ? 1.2 : .7}" ${lv === 1 ? 'stroke-dasharray="3 2"' : ""}/>`;
+  for (const lv of [1, 2, 3, 5, 10].filter(v => v <= M)) s += `<polygon points="${D.functions.map((_, i) => pt(i, lv).join(",")).join(" ")}" fill="none" stroke="var(--line)" stroke-width="${lv === 1 ? 1.2 : .7}" ${lv === 1 ? 'stroke-dasharray="3 2"' : ""}/>`;
   D.functions.forEach((f, i) => {
     const e = pt(i, M), l = pt(i, M + .75);
     s += `<line x1="${cx}" y1="${cy}" x2="${e[0]}" y2="${e[1]}" stroke="${i === plan ? "var(--ink)" : "var(--line)"}" stroke-width="${i === plan ? 2 : .7}"/>`;
@@ -817,7 +822,7 @@ function zoneStats(zid){
     return `<div class="zc" data-z="${z.id}" tabindex="0" role="button" aria-label="${esc(z.name)} 지도에서 보기">
       <div class="zt"><span class="zn"><i style="background:${z.color}"></i>${esc(z.name)}</span><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span></div>
       <div class="role">계획기능 — ${esc(z.role)}</div>
-      ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">거주·사업체가 거의 없어<br>특화도를 계산하지 않습니다.</div>'}
+      ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">${D.floor[z.id] ? "건축물대장 등재 연면적이 " + (D.floor[z.id].tot / 10000).toFixed(1) + "만㎡뿐이라" : "건물·사업체가 거의 없어"}<br>특화도를 계산하지 않습니다.</div>'}
       <h3>${esc(dg.head)}</h3><p>${esc(dg.body)}</p>
       ${spanU.length ? `<div class="small muted">인구·시설 통계는 ${esc(spanU.join("·"))} 행정동(${esc(ZONE[UNITS[spanU[0]].zone].name)})에 합산돼 따로 뗄 수 없습니다.</div>` : ""}
       <div class="stats"><div>인구<b>${st.pop ? (st.pop / 10000).toFixed(1) + "만" : "—"}</b></div>
@@ -893,7 +898,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   $("#api-note").textContent = nOk
     ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
     : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
-  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터.";
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 정부청사관리본부(세종청사 연면적).";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */

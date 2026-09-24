@@ -232,6 +232,43 @@ def load_libraries():
         return json.load(f)["records"]
 
 
+BLD_URL = ("https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo"
+           "?serviceKey={k}&sigunguCd=36110&bjdongCd={bj}&numOfRows=1000&pageNo={page}&_type=json")
+BLD_KEEP = ("platPlc", "bjdongCd", "bldNm", "dongNm", "mainAtchGbCd", "mainPurpsCdNm", "etcPurps",
+            "totArea", "hhldCnt", "useAprDay", "pmsnoKikCdNm")
+
+
+def _bld_codes(key):
+    """세종 법정동(동 5자리)·리 코드 목록. 한 번 찾으면 data/raw/bld_codes.json 에 둔다."""
+    path = os.path.join(RAW, "bld_codes.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return sorted(json.load(f))
+    codes = []
+    cands = [str(c) for c in range(10100, 12600, 100)]
+    cands += [f"{em}{ri}" for em in (250, 310, 320, 330, 340, 350, 360, 370, 380, 390) for ri in range(21, 50)]
+    for bj in cands:
+        d = _json(BLD_URL.format(k=_q(key), bj=bj, page=1).replace("numOfRows=1000", "numOfRows=1"))
+        if int(d["response"]["body"].get("totalCount") or 0):
+            codes.append(bj)
+    _save_raw("bld_codes", {c: 1 for c in codes})
+    return codes
+
+
+def fetch_buildings(key):
+    """건축물대장 표제부 전체(약 4만 동). 용도·연면적만 남긴다."""
+    out = []
+    for bj in _bld_codes(key):
+        def pick(d):
+            b = d["response"]["body"]
+            it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
+            return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
+        items, _ = _paged(BLD_URL.replace("{bj}", bj), key, pick)
+        out += [{f: it.get(f) for f in BLD_KEEP} for it in items]
+    _save_raw("bld", {"items": out})
+    return out
+
+
 def fetch_trades(key, ym_end, months=12):
     out = []
     for i in range(months):
@@ -348,8 +385,47 @@ BUS_R = 400.0
 BUILT_R = 300.0
 
 
+# ── 건축물 용도 → 여섯 기능 ────────────────────────────────────────────
+# FUNCTIONS = ["중앙행정", "상업·문화", "지방행정", "대학·연구", "의료·복지", "첨단·민간업무"]
+LOCAL_GOV = ("시청", "교육청", "교육청사", "행정복지", "주민센터", "소방", "경찰", "지방자치", "읍사무소", "면사무소", "우체국", "보건소")
+COMMERCE = ("제1종근린생활시설", "제2종근린생활시설", "근린생활시설", "판매시설", "문화및집회시설",
+            "숙박시설", "위락시설", "운동시설", "관광휴게시설")
+UNIV = ("대학", "연구", "캠퍼스")
+RESID = ("단독주택", "공동주택")
+# 정부세종청사는 연면적 836,999㎡(정부청사관리본부)인데 건축물대장에는 중앙동만 있다.
+# 차이를 1생활권(어진동) 중앙행정으로 더한다.
+GOV_COMPLEX_TOTAL = 836999.0
+
+
+def classify(b):
+    """건물 하나 → 기능 번호(0~5) 또는 'res'(주거) / None(기타)."""
+    purp = (b.get("mainPurpsCdNm") or "").strip()
+    etc = (b.get("etcPurps") or "")
+    name = (b.get("bldNm") or "")
+    text = etc + " " + name
+    if purp in RESID or "오피스텔" in etc:
+        return "res"
+    if purp == "업무시설":
+        if any(w in text for w in LOCAL_GOV):
+            return 2
+        if "공공청사" in etc or "공공업무" in etc or "정부세종청사" in name or "청사" in name:
+            return 0
+        return 5
+    if purp in COMMERCE:
+        return 1
+    if purp in ("교육연구시설", "교육연구및복지시설"):
+        if any(w in text for w in UNIV):
+            return 3
+        return 4 if purp == "교육연구및복지시설" else None   # 초중고·학원은 생활서비스라 기능 특화에서 뺀다
+    if purp in ("의료시설", "노유자시설"):
+        return 4
+    if purp in ("공장", "방송통신시설"):
+        return 5
+    return None
+
+
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=()) -> dict:
+            parks=(), libs=(), blds=()) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -519,26 +595,76 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             units[u]["apt"] = round(v[m] if len(v) % 2 else (v[m - 1] + v[m]) / 2)
             units[u]["apt_n"] = len(v)
 
+    # 건축물대장 → 생활권 기능 특화도(LQ)·행정동 비주거·공공연구 비중
+    lq, floor_out = {}, {}
+    if blds:
+        zone_of_legal = {u: z["id"] for z in LZ.ZONES for u in z["units"]}
+        zone_of_legal.update({"어진동": "1", "가람동": "2"})
+        fz, fu = {}, {}
+        reg_gov = 0.0
+        for b in blds:
+            try:
+                area = float(b.get("totArea") or 0)
+            except ValueError:
+                continue
+            if area <= 0:
+                continue
+            parts = (b.get("platPlc") or "").split()
+            legal = parts[1] if len(parts) > 1 else ""
+            z, u = zone_of_legal.get(legal), legal2unit.get(legal)
+            c = classify(b)
+            if "정부세종청사" in (b.get("bldNm") or ""):
+                reg_gov += area
+            for key, bucket in ((z, fz), (u, fu)):
+                if not key:
+                    continue
+                d = bucket.setdefault(key, {"tot": 0.0, "res": 0.0, 0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0})
+                d["tot"] += area
+                if c == "res":
+                    d["res"] += area
+                elif c is not None:
+                    d[c] += area
+        extra = max(0.0, GOV_COMPLEX_TOTAL - reg_gov)
+        for key, bucket in (("1", fz), ("도담·어진동", fu)):
+            bucket[key]["tot"] += extra
+            bucket[key][0] += extra
+        city = {k: sum(d[k] for d in fz.values()) for k in ("tot", 0, 1, 2, 3, 4, 5)}
+        for z, d in fz.items():
+            if d["tot"] < 50000:      # 등재 연면적 5만㎡ 미만이면 비율이 몇 동에 좌우돼 뜻이 없다
+                lq[z] = None
+                floor_out[z] = {"tot": round(d["tot"]), "res": round(d["res"]), "fn": [round(d[i]) for i in range(6)]}
+                continue
+            lq[z] = [round((d[i] / d["tot"]) / (city[i] / city["tot"]), 2) if city[i] and d["tot"] else 0
+                     for i in range(6)]
+            floor_out[z] = {"tot": round(d["tot"]), "res": round(d["res"]),
+                            "fn": [round(d[i]) for i in range(6)]}
+        for u, d in fu.items():
+            if u in units and d["tot"]:
+                nonres = d["tot"] - d["res"]
+                units[u]["jhr"] = round(nonres / d["tot"] * 100)
+                units[u]["pub"] = round((d[0] + d[2] + d[3]) / nonres * 100) if nonres > 0 else None
+        floor_out["_gov_extra"] = round(extra)
     points = {
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
         "lib": [{"n": r["도서관명"], "t": r["도서관유형"], "lon": lon, "lat": lat} for lon, lat, r in lib_pts],
     }
     return {
+        "lq": lq, "floor": floor_out,
         "points": points,
-        "asof": {"park": dt.date.today().strftime("%Y-%m-%d"),
+        "asof": {"bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
                    "trades": sum(len(v) for v in per.values()),
                    "hospitals": len(hosp_pts), "sports": len(sp_pts),
-                   "parks": len(points["park"]), "libraries": len(lib_pts)},
+                   "parks": len(points["park"]), "libraries": len(lib_pts), "buildings": len(blds)},
         "units": units,
     }
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": []}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"]}
 
 
 def collect() -> dict:
@@ -566,7 +692,10 @@ def collect() -> dict:
     print("도시공원·도서관 …")
     parks, libs = fetch_parks(key), load_libraries()
     print("  공원", len(parks), "도서관", len(libs))
-    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs)
+    print("건축물대장 …")
+    blds = fetch_buildings(key)
+    print("  건축물", len(blds))
+    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds)
     res["sources"] = list(LIVE_IND)
     res["live"] = [i for ids in LIVE_IND.values() for i in ids]
     res["collected"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M")

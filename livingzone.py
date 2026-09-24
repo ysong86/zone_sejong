@@ -43,7 +43,7 @@ ZONES = [
 ]
 
 # 생활권별 '기능 특화도'(LQ, 1 = 세종 평균). 축 순서는 FUNCTIONS.
-FUNCTIONS = ["중앙행정", "상업·문화", "지방행정", "대학·연구", "의료·복지", "첨단산업"]
+FUNCTIONS = ["중앙행정", "상업·문화", "지방행정", "대학·연구", "의료·복지", "첨단·민간업무"]
 PLANNED = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5}
 LQ = {
     "1": [3.2, 0.8, 0.6, 0.7, 1.6, 0.3],
@@ -202,9 +202,9 @@ INDICATORS = [
     {"id": "kid", "axis": "A", "name": "0~19세 비중", "unit": "%", "good": 0, "fmt": "pct1",
      "calc": "0~19세 / 전체", "api": "mois_age", "cycle": "월",
      "why": "학교·학원·돌봄 수요가 생활권마다 얼마나 다른지 봅니다."},
-    {"id": "jhr", "axis": "A", "name": "직주비", "unit": "배", "good": 0, "fmt": "x2",
-     "calc": "종사자 수 / 생산가능인구(15~64세)", "api": "sgis", "cycle": "연",
-     "why": "1을 크게 넘으면 일자리 중심, 한참 밑이면 잠자리 생활권입니다."},
+    {"id": "jhr", "axis": "A", "name": "비주거 연면적 비중", "unit": "%", "good": 0, "fmt": "pct0",
+     "calc": "건축물대장 연면적 가운데 주택·오피스텔을 뺀 비중(정부세종청사 미등재분 보정)", "api": "bld", "cycle": "월",
+     "why": "일터·상업이 모인 곳과 잠자리 생활권을 가릅니다(직주 구조의 대용)."},
     {"id": "mix", "axis": "A", "name": "기능혼합도", "unit": "0~1", "good": 1, "fmt": "x2",
      "calc": "상가 업종 대분류(10종) 점포 수의 정규화 엔트로피", "api": "sbiz", "cycle": "분기",
      "why": "한 생활권 안에서 여러 기능이 섞이는지(Jacobs, 3D의 Diversity) 봅니다."},
@@ -217,8 +217,8 @@ INDICATORS = [
     {"id": "vac", "axis": "A", "name": "상가 공실 추정", "unit": "%", "good": -1, "fmt": "pct0",
      "calc": "상권별 공실률을 생활권에 배분(부동산원) + 상가정보 폐업 추세 보정", "api": "reb", "cycle": "분기",
      "why": "계획된 중심상가 총량이 실제 수요를 넘었는지 봅니다."},
-    {"id": "pub", "axis": "C", "name": "공공·연구 종사자 비중", "unit": "%", "good": 0, "fmt": "pct0",
-     "calc": "공공행정·연구개발 종사자 / 전체 종사자", "api": "kosis", "cycle": "연",
+    {"id": "pub", "axis": "C", "name": "공공·연구 연면적 비중", "unit": "%", "good": 0, "fmt": "pct0",
+     "calc": "비주거 연면적 가운데 중앙·지방행정 청사와 대학·연구시설의 비중", "api": "bld", "cycle": "월",
      "why": "국가중추기능이 어디에 몰려 있고 어떻게 퍼지는지 봅니다."},
     {"id": "svc", "axis": "B", "name": "15분 생활서비스", "unit": "종/8", "good": 1, "fmt": "x1",
      "calc": "시가지 격자점(120m)마다 직선 1km(우회 1.25배 시 도보 15분) 안에 있는 생활서비스 종류 수의 평균 — 식료품·편의점 / 의원 / 약국 / 음식점 / 카페 / 학원 / 미용·세탁 / 운동시설",
@@ -445,9 +445,10 @@ APIS = [
     {"id": "lib", "name": "전국도서관표준데이터", "host": "공공데이터포털(파일)",
      "url": "사용자 제공 파일 → assets/sejong_libraries.json (세종 24곳)",
      "status": "403", "cycle": "연", "ind": ["lib"]},
-    {"id": "bld", "name": "국토교통부 건축HUB 건축물대장(용도별 연면적)", "host": "공공데이터포털",
-     "url": "apis.data.go.kr/1613000/BldRgstHubService",
-     "status": "todo", "cycle": "월", "ind": ["mix"]},
+    {"id": "bld", "name": "국토교통부 건축HUB 건축물대장정보(표제부)", "host": "공공데이터포털",
+     "url": "apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo (sigunguCd=36110, 법정동·리 140곳)",
+     "status": "403", "cycle": "월", "ind": ["jhr", "pub"],
+     "note": "정부세종청사 본관은 대장에 없어 공표 연면적(836,999㎡)과의 차이를 1생활권 중앙행정으로 보정합니다. 생활권 방사형 그래프(특화도)도 이 자료로 계산합니다."},
     {"id": "std", "name": "전국 도시공원·체육시설 표준데이터(보조)", "host": "공공데이터포털",
      "url": "api.data.go.kr/openapi/tn_pubr_public_lbrry_api 외",
      "status": "todo", "cycle": "분기", "ind": ["svc"]},

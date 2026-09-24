@@ -61,6 +61,7 @@ def build_data(demo: bool = True) -> dict:
     units = LZ.sample_units()
     apis = [dict(a) for a in LZ.APIS]
     asof, live_ind, counts, collected, points = {}, [], {}, None, {}
+    lq, lq_live = LZ.LQ, False
     got = None if demo else _collected()
     if got:
         live_ind = got.get("live", [])
@@ -78,6 +79,8 @@ def build_data(demo: bool = True) -> dict:
                 a["status"] = "ok"
         asof, counts, collected = got.get("asof", {}), got.get("counts", {}), got.get("collected")
         points = got.get("points", {})
+        if got.get("lq"):
+            lq, lq_live = dict(got["lq"]), True
     admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
                   for a in LZ.ADMIN}
     for n, m in admin_meta.items():
@@ -87,7 +90,7 @@ def build_data(demo: bool = True) -> dict:
     return {
         "meta": {"demo": not got, "built": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
                  "asof": asof, "probed": PROBED, "live": live_ind, "counts": counts,
-                 "collected": collected},
+                 "collected": collected, "lqLive": lq_live},
         "axes": LZ.AXES,
         "zones": LZ.ZONES,
         "indicators": LZ.INDICATORS,
@@ -104,7 +107,9 @@ def build_data(demo: bool = True) -> dict:
         "externalSplit": LZ.EXTERNAL_SPLIT,
         "functions": LZ.FUNCTIONS,
         "planned": LZ.PLANNED,
-        "lq": LZ.LQ,
+        "lq": lq,
+        "lqLive": lq_live,
+        "floor": (got or {}).get("floor", {}),
         "diagnosis": LZ.DIAGNOSIS,
         "typeNames": TYPE_NAMES,
         "theory": LZ.THEORY,
