@@ -60,7 +60,7 @@ def _collected():
 def build_data(demo: bool = True) -> dict:
     units = LZ.sample_units()
     apis = [dict(a) for a in LZ.APIS]
-    asof, live_ind, counts, collected = {}, [], {}, None
+    asof, live_ind, counts, collected, points = {}, [], {}, None, {}
     got = None if demo else _collected()
     if got:
         live_ind = got.get("live", [])
@@ -77,6 +77,7 @@ def build_data(demo: bool = True) -> dict:
             if a["id"] in live:
                 a["status"] = "ok"
         asof, counts, collected = got.get("asof", {}), got.get("counts", {}), got.get("collected")
+        points = got.get("points", {})
     admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
                   for a in LZ.ADMIN}
     for n, m in admin_meta.items():
@@ -95,6 +96,7 @@ def build_data(demo: bool = True) -> dict:
         "outline": geo["outline"],
         "zoneShapes": zones,
         "roads": _roads(),
+        "points": points,
         "anchors": LZ.ANCHORS,
         "anchorKinds": ANCHOR_KINDS,
         "flows": LZ.FLOWS,

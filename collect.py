@@ -6,7 +6,8 @@
              행정동 단위로 집계해 data/latest.json 을 쓴다.
 
 지금 붙어 있는 것(2026-09-24): 행안부 인구·세대, 행안부 성·연령별 인구,
-소상공인 상가정보, TAGO 버스정류소, 국토부 아파트 매매 실거래가.
+소상공인 상가정보, TAGO 버스정류소, 국토부 아파트 매매 실거래가,
+심평원 병원정보, 체육진흥공단 전국체육시설.
 
 점포·정류장은 좌표로 행정동 면에 넣는다(점포 자료의 행정동명은 분동 전
 기준이라 집현동이 없다). 지도에 거주 위치가 없으므로 '시가지 격자점' —
@@ -42,6 +43,11 @@ PROBES = {
             "?serviceKey={k}&LAWD_CD=36110&DEAL_YMD={ym}&numOfRows=1000&pageNo={page}&_type=json",
     "hira": "https://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList"
             "?serviceKey={k}&sidoCd=410000&_type=json&numOfRows=1000&pageNo={page}",
+    "kspo": "https://apis.data.go.kr/B551014/SRVC_API_SFMS_FACI/TODZ_API_SFMS_FACI"
+            "?serviceKey={k}&resultType=json&numOfRows=500&pageNo={page}"
+            "&cp_nm=%EC%84%B8%EC%A2%85%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EC%8B%9C",
+    "park": "https://apis.data.go.kr/5690000/sjParkStat/sj_00000290"
+            "?serviceKey={k}&pageIndex={page}&pageUnit=200&dataTy=json",
 }
 
 
@@ -89,11 +95,23 @@ def _get(url: str, timeout: int = 60):
         return None, str(e).encode()
 
 
-def _json(url):
-    code, body = _get(url)
-    if code != 200:
-        raise RuntimeError(f"HTTP {code}")
-    return json.loads(body)
+def _json(url, tries=4):
+    """포털은 가끔 타임아웃이나 빈 본문을 준다. 몇 번 다시 시도한다."""
+    import time
+    last = None
+    for i in range(tries):
+        code, body = _get(url)
+        if code == 200:
+            try:
+                return json.loads(body)
+            except ValueError:
+                last = "JSON 아님: " + body[:80].decode("utf-8", "replace")
+        else:
+            last = f"HTTP {code}"
+            if code in (401, 403):
+                break
+        time.sleep(2 * (i + 1))
+    raise RuntimeError(last)
 
 
 def _save_raw(name, obj):
@@ -172,7 +190,7 @@ def fetch_stores(key):
 def fetch_stops(key):
     def pick(d):
         b = d["response"]["body"]
-        it = (b.get("items") or {}).get("item") or [] if isinstance(b.get("items"), dict) else []
+        it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
         return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
     items, _ = _paged(PROBES["tago"], key, pick)
     _save_raw("tago", {"items": items})
@@ -182,11 +200,36 @@ def fetch_stops(key):
 def fetch_hospitals(key):
     def pick(d):
         b = d["response"]["body"]
-        it = (b.get("items") or {}).get("item") or [] if isinstance(b.get("items"), dict) else []
+        it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
         return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
     items, _ = _paged(PROBES["hira"], key, pick)
     _save_raw("hira", {"items": items})
     return items
+
+
+def fetch_sports(key):
+    def pick(d):
+        b = d["response"]["body"]
+        it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
+        return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
+    items, _ = _paged(PROBES["kspo"], key, pick)
+    _save_raw("kspo", {"items": items})
+    return items
+
+
+def fetch_parks(key):
+    """세종시 도시공원정보. 시(시설관리사업소)가 관리하는 공원만 들어 있다(70곳, 대부분 1·2생활권)."""
+    def pick(d):
+        return d["body"].get("items") or [], int(d["header"].get("totalCount", 0))
+    items, _ = _paged(PROBES["park"], key, pick)
+    _save_raw("park", {"items": items})
+    return items
+
+
+def load_libraries():
+    """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
+    with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
+        return json.load(f)["records"]
 
 
 def fetch_trades(key, ym_end, months=12):
@@ -196,7 +239,7 @@ def fetch_trades(key, ym_end, months=12):
 
         def pick(d):
             b = d["response"]["body"]
-            it = (b.get("items") or {}).get("item") or [] if isinstance(b.get("items"), dict) else []
+            it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
             return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
         items, _ = _paged(PROBES["rtms"], key, pick, ym=ym)
         out += items
@@ -295,16 +338,18 @@ SERVICES = {  # 15분 생활서비스 8종
     "카페": lambda s: s["indsMclsNm"].strip() == "비알코올",
     "학원": lambda s: s["indsLclsNm"] == "교육",
     "미용·세탁": lambda s: s["indsMclsNm"] in ("이용·미용", "세탁"),
-    "운동시설": lambda s: s["indsMclsNm"] == "스포츠 서비스" or s["indsSclsNm"] == "요가/필라테스 학원",
 }
 # 의원은 심평원 병원정보로 센다(상가정보보다 정확). 치과·한의원·요양·정신병원은 뺀다.
 CLINIC_KINDS = ("의원", "병원", "종합병원", "보건소", "보건지소", "보건진료소")
+# 운동시설은 체육진흥공단 전국체육시설(정상운영)로 센다. 당구장·무도학원은 뺀다.
+SPORT_EXCLUDE = ("당구장", "무도학원")
 WALK = 1000.0          # 직선 1km ≈ 우회 1.25배 도보 15분(4.8km/h)
 BUS_R = 400.0
 BUILT_R = 300.0
 
 
-def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps) -> dict:
+def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
+            parks=(), libs=()) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -404,6 +449,21 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     hosp_pts = [(float(h["XPos"]), float(h["YPos"]), h) for h in hosps if h.get("XPos") and h.get("YPos")]
     svc_grids = {k: Grid([p for p in st_pts if f(p[2])]) for k, f in SERVICES.items()}
     svc_grids["의원"] = Grid([p for p in hosp_pts if p[2].get("clCdNm") in CLINIC_KINDS])
+    sp_pts = [(float(f["faci_lot"]), float(f["faci_lat"]), f) for f in sports
+              if f.get("faci_stat_nm") == "정상운영" and f.get("faci_lot") and f.get("faci_lat")
+              and f.get("ftype_nm") not in SPORT_EXCLUDE]
+    svc_grids["운동시설"] = Grid(sp_pts)
+    pub = {}
+    for lon, lat, f in sp_pts:
+        if f.get("faci_gb_nm") != "공공":
+            continue
+        u = locate(lon, lat)
+        if u:
+            pub[u] = pub.get(u, 0) + 1
+    for u in units:
+        if units[u].get("pop"):
+            units[u]["psport"] = round(pub.get(u, 0) / units[u]["pop"] * 10000, 1)
+            units[u]["psport_n"] = pub.get(u, 0)
     docs = {}
     for lon, lat, h in hosp_pts:
         u = locate(lon, lat)
@@ -415,6 +475,8 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             units[u]["docs"] = d
     any_grid = Grid(st_pts + stop_pts)
     stop_grid, brt_grid = Grid(stop_pts), Grid(brt_pts, cell=1000.0)
+    lib_pts = [(float(r["경도"]), float(r["위도"]), r) for r in libs if r.get("경도") and r.get("위도")]
+    lib_grid = Grid(lib_pts, cell=1000.0)
 
     for n, s in shapes.items():
         pts = [p for p in _points_in(s["rings"]) if next(any_grid.near(p[0], p[1], BUILT_R), None)]
@@ -431,6 +493,9 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         in_ring = LZ.ADMIN_ZONE.get(n) != "R"
         units[n]["brt"] = round(sum(dists) / len(dists) * 1.25 / (4000 / 60), 1) if dists and in_ring else None
         units[n]["built"] = len(pts)
+        if lib_pts:
+            units[n]["lib"] = round(sum(1 for lon, lat in pts if next(lib_grid.near(lon, lat, WALK), None))
+                                    / len(pts) * 100)
 
     # 아파트 ㎡당 매매가(12개월 중앙값) — 법정동 이름으로 행정동에 넣는다
     legal2unit = {l: a["name"] for a in LZ.ADMIN for l in a["legal"]}
@@ -454,18 +519,26 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             units[u]["apt"] = round(v[m] if len(v) % 2 else (v[m - 1] + v[m]) / 2)
             units[u]["apt_n"] = len(v)
 
+    points = {
+        "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
+                 for p in parks if p.get("lo") and p.get("la")],
+        "lib": [{"n": r["도서관명"], "t": r["도서관유형"], "lon": lon, "lat": lat} for lon, lat, r in lib_pts],
+    }
     return {
-        "asof": {"hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
+        "points": points,
+        "asof": {"park": dt.date.today().strftime("%Y-%m-%d"),
+                 "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
                    "trades": sum(len(v) for v in per.values()),
-                   "hospitals": len(hosp_pts)},
+                   "hospitals": len(hosp_pts), "sports": len(sp_pts),
+                   "parks": len(points["park"]), "libraries": len(lib_pts)},
         "units": units,
     }
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"]}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": []}
 
 
 def collect() -> dict:
@@ -487,7 +560,13 @@ def collect() -> dict:
     print("병원정보 …")
     hosps = fetch_hospitals(key)
     print("  의료기관", len(hosps))
-    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps)
+    print("체육시설 …")
+    sports = fetch_sports(key)
+    print("  체육시설", len(sports))
+    print("도시공원·도서관 …")
+    parks, libs = fetch_parks(key), load_libraries()
+    print("  공원", len(parks), "도서관", len(libs))
+    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs)
     res["sources"] = list(LIVE_IND)
     res["live"] = [i for ids in LIVE_IND.values() for i in ids]
     res["collected"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
