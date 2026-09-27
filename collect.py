@@ -326,6 +326,51 @@ def fetch_sgis_company():
     return None
 
 
+REB_TABLES = {"중대형": "T249633134845544", "소규모": "T241833134686576",
+              "집합": "T243283134931290", "일반": "T262303140824764"}
+# 부동산원 표본 상권 → 행정동, 그리고 그 상권에서 쓸 상가 유형
+REB_MAP = {"세종>나성한솔동": (["나성동", "한솔동"], "집합"),
+           "세종>세종정부청사": (["도담·어진동"], "집합"),
+           "세종>조치원": (["조치원읍"], "일반")}
+
+
+def _qid(s):
+    """분기 식별자 정리. 원자료에 '262602'(=202602) 같은 오기가 있다."""
+    s = str(s)
+    return "20" + s[2:] if len(s) == 6 and s.startswith("26") else s
+
+
+def fetch_vacancy():
+    """한국부동산원 R-ONE 상업용부동산 임대동향 공실률(2024년 3분기~). 세종 표본 상권만 남긴다."""
+    key = _cfg("reb_key")
+    if not key:
+        return None
+    out = {}
+    for kind, tid in REB_TABLES.items():
+        rows, page = [], 1
+        while True:
+            q = urllib.parse.urlencode({"KEY": key, "Type": "json", "STATBL_ID": tid, "DTACYCLE_CD": "QY",
+                                        "pIndex": page, "pSize": 1000})
+            d = _json("https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do?" + q)
+            blk = d.get("SttsApiTblData")
+            if not blk:
+                break
+            r = blk[1]["row"]
+            rows += [x for x in r if (x.get("CLS_FULLNM") or "").startswith("세종")]
+            if len(r) < 1000:
+                break
+            page += 1
+        latest = {}
+        for x in rows:
+            q_ = _qid(x["WRTTIME_IDTFR_ID"])
+            nm = x["CLS_FULLNM"]
+            if x.get("DTA_VAL") is not None and q_ >= latest.get(nm, ("", 0))[0]:
+                latest[nm] = (q_, round(float(x["DTA_VAL"]), 1))
+        out[kind] = latest
+    _save_raw("reb_vacancy", out)
+    return out
+
+
 def load_libraries():
     """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
     with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
@@ -525,7 +570,7 @@ def classify(b):
 
 
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=(), blds=(), schools=(), company=None) -> dict:
+            parks=(), libs=(), blds=(), schools=(), company=None, vacancy=None) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -770,6 +815,16 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             if units[u].get("pop"):
                 units[u]["emp"] = round(w / units[u]["pop"], 2)
                 units[u]["workers"] = w
+    # 부동산원 공실률 — 표본 상권이 있는 행정동만 값이 생긴다(나머지는 빈칸이 정직하다).
+    vac_q = ""
+    if vacancy:
+        for area, (names, kind) in REB_MAP.items():
+            q_, v = vacancy.get(kind, {}).get(area, ("", None))
+            for n in names:
+                if n in units and v is not None:
+                    units[n]["vac"] = v
+                    units[n]["vac_kind"] = kind
+            vac_q = max(vac_q, q_)
     points = {
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
@@ -779,7 +834,8 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     return {
         "lq": lq, "floor": floor_out,
         "points": points,
-        "asof": {"sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
+        "vacancy": vacancy,
+        "asof": {"reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
@@ -792,7 +848,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"], "sgis": ["emp"]}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"]}
 
 
 def collect() -> dict:
@@ -829,8 +885,10 @@ def collect() -> dict:
     print("사업체·종사자(SGIS) …")
     company = fetch_sgis_company()
     print("  기준", company and company["year"], "행정동", company and len(company["rows"]))
+    print("상가 공실률(R-ONE) …")
+    vacancy = fetch_vacancy()
     res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
-                  schools, company)
+                  schools, company, vacancy)
     print("통근·통학(KOSIS) …")
     res["commute"] = fetch_commute()
     res["sources"] = list(LIVE_IND) + (["kosis"] if res["commute"] else [])

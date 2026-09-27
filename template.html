@@ -801,7 +801,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년"})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년", reb:"부동산원 " + (a.reb || "")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -932,7 +932,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   $("#api-note").textContent = nOk
     ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
     : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
-  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 통계청 SGIS·KOSIS, 정부청사관리본부(세종청사 연면적).";
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 한국부동산원 R-ONE, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 통계청 SGIS·KOSIS, 정부청사관리본부(세종청사 연면적).";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */
