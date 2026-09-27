@@ -226,6 +226,55 @@ def fetch_parks(key):
     return items
 
 
+def _cfg(name):
+    path = os.path.join(HERE, "config.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get(name, "")
+    return ""
+
+
+def _geocode(addr, vkey, cache):
+    """브이월드 주소→좌표. 도로명으로 먼저, 안 되면 지번으로. 결과는 캐시에 남긴다."""
+    if addr in cache:
+        return cache[addr]
+    out = None
+    for typ in ("road", "parcel"):
+        url = ("https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0"
+               f"&crs=epsg:4326&type={typ}&format=json&key={vkey}&address={urllib.parse.quote(addr)}")
+        try:
+            r = _json(url, tries=2)["response"]
+        except RuntimeError:
+            continue
+        if r.get("status") == "OK":
+            pt = r["result"]["point"]
+            out = [float(pt["x"]), float(pt["y"])]
+            break
+    cache[addr] = out
+    return out
+
+
+def fetch_schools():
+    """교육부 NEIS 학교기본정보(세종시교육청 I10) + 브이월드 주소 좌표화."""
+    nkey, vkey = _cfg("neis_key"), _cfg("vworld_key")
+    if not nkey or not vkey:
+        return []
+    d = _json(f"https://open.neis.go.kr/hub/schoolInfo?KEY={nkey}&Type=json&pIndex=1&pSize=1000"
+              "&ATPT_OFCDC_SC_CODE=I10")
+    rows = d["schoolInfo"][1]["row"]
+    cpath = os.path.join(RAW, "school_geo.json")
+    cache = json.load(open(cpath, encoding="utf-8")) if os.path.exists(cpath) else {}
+    out = []
+    for r in rows:
+        addr = " ".join((r.get("ORG_RDNMA") or "").split())
+        xy = _geocode(addr, vkey, cache) if addr else None
+        out.append({"name": r["SCHUL_NM"], "kind": r["SCHUL_KND_SC_NM"], "addr": addr,
+                    "lon": xy[0] if xy else None, "lat": xy[1] if xy else None})
+    _save_raw("school_geo", cache)
+    _save_raw("neis", {"items": out})
+    return out
+
+
 def load_libraries():
     """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
     with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
@@ -425,7 +474,7 @@ def classify(b):
 
 
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=(), blds=()) -> dict:
+            parks=(), libs=(), blds=(), schools=()) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -553,6 +602,8 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     stop_grid, brt_grid = Grid(stop_pts), Grid(brt_pts, cell=1000.0)
     lib_pts = [(float(r["경도"]), float(r["위도"]), r) for r in libs if r.get("경도") and r.get("위도")]
     lib_grid = Grid(lib_pts, cell=1000.0)
+    sch_pts = [(s["lon"], s["lat"], s) for s in schools if s.get("lon") and _in_unit(s["lon"], s["lat"], outline)]
+    elem_grid = Grid([p for p in sch_pts if p[2]["kind"] == "초등학교"])
 
     for n, s in shapes.items():
         pts = [p for p in _points_in(s["rings"]) if next(any_grid.near(p[0], p[1], BUILT_R), None)]
@@ -569,6 +620,10 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         in_ring = LZ.ADMIN_ZONE.get(n) != "R"
         units[n]["brt"] = round(sum(dists) / len(dists) * 1.25 / (4000 / 60), 1) if dists and in_ring else None
         units[n]["built"] = len(pts)
+        if sch_pts:
+            # 근린주구(Perry): 초등학교를 중심으로 반경 약 1/2마일(800m)
+            units[n]["school"] = round(sum(1 for lon, lat in pts if next(elem_grid.near(lon, lat, 800.0), None))
+                                       / len(pts) * 100)
         if lib_pts:
             units[n]["lib"] = round(sum(1 for lon, lat in pts if next(lib_grid.near(lon, lat, WALK), None))
                                     / len(pts) * 100)
@@ -645,23 +700,25 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
         "lib": [{"n": r["도서관명"], "t": r["도서관유형"], "lon": lon, "lat": lat} for lon, lat, r in lib_pts],
+        "school": [{"n": s["name"], "t": s["kind"], "lon": lon, "lat": lat} for lon, lat, s in sch_pts],
     }
     return {
         "lq": lq, "floor": floor_out,
         "points": points,
-        "asof": {"bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
+        "asof": {"neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
                    "trades": sum(len(v) for v in per.values()),
                    "hospitals": len(hosp_pts), "sports": len(sp_pts),
-                   "parks": len(points["park"]), "libraries": len(lib_pts), "buildings": len(blds)},
+                   "parks": len(points["park"]), "libraries": len(lib_pts), "buildings": len(blds),
+                   "schools": len(sch_pts)},
         "units": units,
     }
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"]}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"]}
 
 
 def collect() -> dict:
@@ -692,7 +749,11 @@ def collect() -> dict:
     print("건축물대장 …")
     blds = fetch_buildings(key)
     print("  건축물", len(blds))
-    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds)
+    print("학교(NEIS) …")
+    schools = fetch_schools()
+    print("  학교", len(schools), "좌표 실패", sum(1 for x in schools if x["lon"] is None))
+    res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
+                  schools)
     res["sources"] = list(LIVE_IND)
     res["live"] = [i for ids in LIVE_IND.values() for i in ids]
     res["collected"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M")

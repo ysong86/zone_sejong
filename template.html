@@ -116,6 +116,7 @@ svg#map.drag{cursor:grabbing}
 #map .xlbl{fill:var(--accent);font-weight:700;paint-order:stroke;stroke:var(--halo);stroke-width:3px;pointer-events:none}
 #map .pk{fill:#4E9A52;fill-opacity:.55;stroke:var(--halo);stroke-width:.8;vector-effect:non-scaling-stroke;cursor:help}
 #map .lb{fill:#B5651D;stroke:var(--halo);stroke-width:1;vector-effect:non-scaling-stroke;cursor:help}
+#map .sc{fill:#7A4FB5;stroke:var(--halo);stroke-width:1;vector-effect:non-scaling-stroke;cursor:help}
 #map .an{stroke:var(--halo);stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:help}
 .legend{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:8px 12px;border-top:1px solid var(--line2);font-size:12px;color:var(--ink2)}
 .ramp{display:flex;align-items:center;gap:0}
@@ -403,7 +404,7 @@ $("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.me
   } else {
     const a = D.meta.asof || {}, c = D.meta.counts || {};
     const nLive = D.indicators.filter(i => isLive(i.id)).length, nAll = D.indicators.length;
-    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 건축물 ${(c.buildings||0).toLocaleString("ko-KR")}동, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록의 <span class="lv off">샘플</span> 지표${D.lqLive ? "" : "와 생활권 진단의 특화도(방사형 그래프)"}, 생활권 간·광역 통행 흐름은 아직 예시 수치입니다.`;
+    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 학교 ${(c.schools||0)}곳, 건축물 ${(c.buildings||0).toLocaleString("ko-KR")}동, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록의 <span class="lv off">샘플</span> 지표${D.lqLive ? "" : "와 생활권 진단의 특화도(방사형 그래프)"}, 생활권 간·광역 통행 흐름은 아직 예시 수치입니다.`;
   }
 }
 
@@ -588,6 +589,11 @@ function drawOverlays(){
     const r = (p.t === "공공도서관" ? 4.6 : 3.2) * px;
     return `<rect class="pt lb" data-k="lib" data-i="${i}" x="${(X(p.lon) - r).toFixed(2)}" y="${(Y(p.lat) - r).toFixed(2)}" width="${(2*r).toFixed(2)}" height="${(2*r).toFixed(2)}"/>`;
   }).join("");
+  if (state.layers.school && P.school) ph += P.school.map((p, i) => {
+    if (p.t !== "초등학교") return "";
+    const x = X(p.lon), y = Y(p.lat), r = 4.4 * px;
+    return `<path class="pt sc" data-k="school" data-i="${i}" d="M${x.toFixed(2)},${(y - r).toFixed(2)}L${(x + r).toFixed(2)},${(y + r * .8).toFixed(2)}L${(x - r).toFixed(2)},${(y + r * .8).toFixed(2)}Z"/>`;
+  }).join("");
   g("#g-points").innerHTML = ph;
   g("#g-points").querySelectorAll(".pt").forEach(el => {
     const p = P[el.dataset.k][+el.dataset.i];
@@ -660,7 +666,7 @@ function views(){
 }
 
 /* 왼쪽 레일 */
-const LAYERS = [["zone","생활권 경계"],["anchor","거점"],["park","도시공원"],["lib","도서관"],["flow","생활권 간 흐름"],["ext","광역 흐름"],["road","간선·BRT"],["name","동 이름"]];
+const LAYERS = [["zone","생활권 경계"],["anchor","거점"],["park","도시공원"],["lib","도서관"],["school","초등학교"],["flow","생활권 간 흐름"],["ext","광역 흐름"],["road","간선·BRT"],["name","동 이름"]];
 function rail(){
   let h = "";
   for (const ax of ["A","B","C"]) {
@@ -672,7 +678,8 @@ function rail(){
     `<button class="chip" type="button" data-l="${k2}" aria-pressed="${!!state.layers[k2]}">${n}</button>`).join("") + `</div>`;
   if (D.points && (D.points.park || D.points.lib)) h += `<h4>시설 겹</h4><div class="small" style="display:grid;gap:3px">
     <span class="lg-item"><span class="dot" style="background:#4E9A52;opacity:.7"></span>도시공원 ${D.points.park ? D.points.park.length : 0}곳(시 관리분만, 크기 = 면적)</span>
-    <span class="lg-item"><span class="dot" style="background:#B5651D;border-radius:1px"></span>도서관 ${D.points.lib ? D.points.lib.length : 0}곳(큰 사각 = 공공)</span></div>`;
+    <span class="lg-item"><span class="dot" style="background:#B5651D;border-radius:1px"></span>도서관 ${D.points.lib ? D.points.lib.length : 0}곳(큰 사각 = 공공)</span>
+    <span class="lg-item"><span class="dot" style="background:#7A4FB5;clip-path:polygon(50% 0,100% 90%,0 90%);border-radius:0"></span>초등학교 ${D.points.school ? D.points.school.filter(p => p.t === "초등학교").length : 0}곳</span></div>`;
   h += `<h4>거점 범례</h4><div class="small" style="display:grid;gap:3px">` + Object.values(D.anchorKinds).map(k2 =>
     `<span class="lg-item"><span class="dot" style="background:${k2.color};${k2.diamond ? "border-radius:1px;transform:rotate(45deg) scale(.85)" : ""}"></span>${esc(k2.name)}</span>`).join("") + `</div>`;
   $("#rail").innerHTML = h;
@@ -779,7 +786,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || "")})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), neis:"NEIS " + (a.neis || "")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -899,7 +906,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   $("#api-note").textContent = nOk
     ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
     : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
-  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 정부청사관리본부(세종청사 연면적).";
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 정부청사관리본부(세종청사 연면적).";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */
