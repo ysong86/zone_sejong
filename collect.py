@@ -275,6 +275,37 @@ def fetch_schools():
     return out
 
 
+# 광역 상대 — livingzone.EXTERNAL 의 id 와 KOSIS 행정구역 코드
+COMMUTE_PARTNERS = {"dj": ["25"], "cj": ["33040"], "gj": ["34020"], "ca": ["34010", "34040"], "sm": ["90"]}
+
+
+def fetch_commute():
+    """KOSIS 인구총조사 2020 현거주지별/통근통학지별 통근통학 인구(대전·세종·충북·충남, DT_1PA2009).
+
+    세종 → 시외(유출)와 대전·충북·충남 → 세종(유입). 수도권 등 네 시도 밖에서 오는 유입은 이 표에 없다.
+    """
+    key = _cfg("kosis_key")
+    if not key:
+        return None
+
+    def get(o1, o2):
+        u = ("https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey="
+             f"{_q(key)}&itmId=T1&objL1={o1}&objL2={o2}&format=json&jsonVD=Y&prdSe=F&newEstPrdCnt=1"
+             "&orgId=101&tblId=DT_1PA2009")
+        d = _json(u)
+        return d if isinstance(d, list) else []
+    out, inn = get("29010", "ALL"), get("ALL", "29010")
+    _save_raw("kosis_commute", {"out": out, "in": inn})
+    o = {r["C2"]: int(float(r["DT"])) for r in out}
+    i = {r["C1"]: int(float(r["DT"])) for r in inn}
+    total, internal = o.get("00", 0), o.get("29010", 0)
+    partners = {pid: {"out": sum(o.get(c, 0) for c in codes),
+                      "in": None if pid == "sm" else sum(i.get(c, 0) for c in codes)}
+                for pid, codes in COMMUTE_PARTNERS.items()}
+    return {"year": out[0]["PRD_DE"] if out else "", "total": total, "internal": internal,
+            "out": total - internal, "in": i.get("00", 0) - i.get("29010", 0), "partners": partners}
+
+
 def load_libraries():
     """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
     with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
@@ -754,7 +785,9 @@ def collect() -> dict:
     print("  학교", len(schools), "좌표 실패", sum(1 for x in schools if x["lon"] is None))
     res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
                   schools)
-    res["sources"] = list(LIVE_IND)
+    print("통근·통학(KOSIS) …")
+    res["commute"] = fetch_commute()
+    res["sources"] = list(LIVE_IND) + (["kosis"] if res["commute"] else [])
     res["live"] = [i for ids in LIVE_IND.values() for i in ids]
     res["collected"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     with open(LATEST, "w", encoding="utf-8") as f:

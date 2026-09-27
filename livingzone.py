@@ -243,7 +243,7 @@ INDICATORS = [
      "calc": "출발 통행 중 다른 생활권 도착 비중(읍면은 행복도시로 가는 비중)", "api": "ktdb", "cycle": "연",
      "why": "생활권이 자족하는지, 서로 기대는지 — 기능적 다핵성을 봅니다."},
     {"id": "outc", "axis": "C", "name": "시외 통근 비중", "unit": "%", "good": 0, "fmt": "pct0",
-     "calc": "세종 밖(대전·청주·공주 등)으로 가는 통근·통학 / 전체", "api": "kosis", "cycle": "5년",
+     "calc": "세종 밖(대전·청주·공주 등)으로 가는 통근·통학 / 전체 — 행정동별 값은 공표되지 않아 샘플. 세종 전체 실측은 광역 흐름(KOSIS 2020)에 있음", "api": "kosis", "cycle": "5년",
      "why": "광역권에 얼마나 기대는지 — 차용 규모(borrowed size)의 방향을 봅니다."},
     {"id": "apt", "axis": "C", "name": "아파트 ㎡당 매매가", "unit": "만원", "good": 0, "fmt": "int",
      "calc": "최근 12개월 실거래 ㎡당 가격 중앙값", "api": "rtms", "cycle": "월",
@@ -289,10 +289,10 @@ ANCHORS = [
 # 광역 상대 — 지도 가장자리에 놓는다.
 EXTERNAL = [
     {"id": "dj", "name": "대전(유성·둔산)", "lon": 127.365, "lat": 36.375, "trips": 95},
-    {"id": "cj", "name": "청주·오송·오창", "lon": 127.455, "lat": 36.640, "trips": 38},
+    {"id": "cj", "name": "청주(오송·오창 포함)", "lon": 127.455, "lat": 36.640, "trips": 38},
     {"id": "gj", "name": "공주", "lon": 127.118, "lat": 36.455, "trips": 14},
     {"id": "ca", "name": "천안·아산", "lon": 127.170, "lat": 36.770, "trips": 9},
-    {"id": "sm", "name": "수도권", "lon": 127.300, "lat": 36.775, "trips": 12},
+    {"id": "sm", "name": "그 밖의 시도(수도권 등)", "lon": 127.300, "lat": 36.775, "trips": 12},
 ]
 # 광역 통행을 어느 생활권이 주로 내는지(샘플, 천 통행/일)
 EXTERNAL_SPLIT = {
@@ -458,8 +458,9 @@ APIS = [
     {"id": "sgis", "name": "통계청 SGIS 오픈API(인구·사업체·경계)", "host": "sgis.kostat.go.kr",
      "url": "sgisapi.kostat.go.kr/OpenAPI3/stats/company.json",
      "status": "key", "cycle": "연", "ind": ["jhr"]},
-    {"id": "kosis", "name": "KOSIS 오픈API(통근통학·사업체조사)", "host": "kosis.kr",
-     "url": "kosis.kr/openapi/Param/statisticsParameterData.do",
+    {"id": "kosis", "name": "KOSIS 인구총조사 통근·통학(2020)", "host": "kosis.kr",
+     "note": "세종 전체 → 시외 유출, 대전·충북·충남 → 세종 유입만 공표됩니다. 광역 흐름도·광역 통행 막대를 실측으로 그립니다. 행정동별 값은 없습니다.",
+     "url": "kosis.kr/openapi/Param/statisticsParameterData.do (orgId=101, tblId=DT_1PA2009)",
      "status": "key", "cycle": "연~5년", "ind": ["outc", "pub"]},
     {"id": "reb", "name": "한국부동산원 R-ONE 상업용부동산 임대동향(공실률)", "host": "r-one.co.kr",
      "url": "www.reb.or.kr/r-one/openapi/SttsApiTblData.do",

@@ -317,14 +317,14 @@ footer p{margin:0;max-width:90ch}
   </div>
   <div class="two">
     <div class="card">
-      <h3>생활권 간 통행(천 통행/일, 양방향 합)</h3>
+      <h3>생활권 간 통행(천 통행/일, 양방향 합) <span class="lv off">샘플</span></h3>
       <div class="scroll-x"><table class="mx" id="matrix"></table></div>
       <p class="small muted" id="mx-note" style="margin:8px 0 0"></p>
     </div>
     <div class="card">
-      <h3>광역 통행 — 어디와, 어느 생활권이</h3>
+      <h3 id="xh">광역 통행 — 어디와, 어느 생활권이 <span class="lv off">샘플</span></h3>
       <div class="xbars" id="xbars"></div>
-      <p class="small muted" style="margin:10px 0 0">대전(남서)과의 연결이 강해지고 청주·천안(북동)과는 약해졌다는 연구 결과(변은주 외, 2023)가 기준선입니다. 막대 안의 색은 그 통행을 내는 생활권입니다.</p>
+      <p class="small muted" id="xnote" style="margin:10px 0 0">대전(남서)과의 연결이 강해지고 청주·천안(북동)과는 약해졌다는 연구 결과(변은주 외, 2023)가 기준선입니다. 막대 안의 색은 그 통행을 내는 생활권입니다.</p>
     </div>
   </div>
 </section>
@@ -428,18 +428,21 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
   const weak = lqPlan.filter(x => x.v < 1);
   const tot = D.flows.reduce((a, f) => a + f[2], 0);
   const core = D.flows.filter(f => ["1","2","3"].includes(f[0]) && ["1","2","3"].includes(f[1])).reduce((a,f)=>a+f[2],0);
-  const xt = D.external.reduce((a, x) => a + x.trips, 0);
+  const xt = D.commute ? D.commute.out : D.external.reduce((a, x) => a + x.trips, 0);
   const dj = D.external.find(x => x.id === "dj");
+  const djv = D.commute ? dj.out : dj.trips;
   const cards = [
     {k:"A", big: weak.length + `<small>/ ${lqPlan.length}개 생활권</small>`,
      p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권." +
         (weak.some(x => (D.floor[x.z.id] || {}).thin) ? " (5생활권은 등재 건물이 아직 거의 없습니다.)" : ""),
      ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
-    {k:"B", big: Math.round(core / tot * 100) + "<small>%</small>",
-     p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중. 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
+    {k:"B", big: Math.round(core / tot * 100) + "<small>% (샘플)</small>",
+     p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중(예시값 — 통행 O/D 자료 확보 전). 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
      ask:"BRT 순환축을 생활권 사이의 중심으로 쓸 것인가?"},
-    {k:"C", big: Math.round(dj.trips / xt * 100) + "<small>% 대전</small>",
-     p: "시 경계를 넘는 통행 가운데 대전 몫. 국가상징구역(S생활권)은 아직 생활권 체계 밖에 있습니다.",
+    {k:"C", big: Math.round(djv / xt * 100) + "<small>% 대전</small>",
+     p: D.commute
+       ? `세종에서 시 밖으로 통근·통학하는 ${D.commute.out.toLocaleString("ko-KR")}명(전체의 ${Math.round(D.commute.out / D.commute.total * 100)}%, ${D.commute.year} 인구총조사) 가운데 대전으로 가는 몫. 국가상징구역(S생활권)은 아직 생활권 체계 밖에 있습니다.`
+       : "시 경계를 넘는 통행 가운데 대전 몫. 국가상징구역(S생활권)은 아직 생활권 체계 밖에 있습니다.",
      ask:"국가중추기능과 광역 관계를 생활권 위계에 넣을 것인가?"},
   ];
   $("#axes").innerHTML = cards.map(c => `
@@ -620,7 +623,7 @@ function drawOverlays(){
     const dx = p[0] - cen[0], dy = p[1] - cen[1];
     return `<path class="fx" d="M${cen[0]},${cen[1]}Q${cen[0] + dx * .5 - dy * .12},${cen[1] + dy * .5 + dx * .12} ${p[0]},${p[1]}" stroke-width="${w.toFixed(1)}"/>
       <circle class="xn" cx="${p[0]}" cy="${p[1]}" r="${(6 * px).toFixed(2)}"/>
-      <text class="xlbl" x="${p[0]}" y="${(p[1] - 10 * px).toFixed(2)}" text-anchor="middle" font-size="${(12 * px).toFixed(2)}" style="stroke-width:${(3*px).toFixed(2)}px">${esc(x.name)} ${x.trips}천</text>`;
+      <text class="xlbl" x="${p[0]}" y="${(p[1] - 10 * px).toFixed(2)}" text-anchor="middle" font-size="${(12 * px).toFixed(2)}" style="stroke-width:${(3*px).toFixed(2)}px">${esc(x.name)} ${D.commute ? (x.out / 1000).toFixed(1) + "천 명↗" + (x.in != null ? " " + (x.in / 1000).toFixed(1) + "천 명↙" : "") : x.trips + "천"}</text>`;
   }).join("") : "";
   svg.querySelector("#g-roads").style.display = state.layers.road ? "" : "none";
   svg.querySelector("#g-zones").style.display = state.layers.zone ? "" : "none";
@@ -871,6 +874,17 @@ function zoneStats(zid){
   const weakest = ["4","5","6"].map(i => `${ZONE[i].name} ${by[i] || 0}`).join(" · ");
   $("#mx-note").textContent = `생활권 간 통행 합 ${tot}천/일. 순환 구조의 동쪽 절반 — ${weakest}(천/일, 연결된 통행 합) — 이 가장 약합니다.`;
   const maxX = Math.max(...D.external.map(x => x.trips));
+  if (D.commute) {
+    const mx = Math.max(...D.external.map(x => Math.max(x.out || 0, x.in || 0)));
+    $("#xh").innerHTML = '광역 통근·통학 — 어디로 나가고 어디서 오나 <span class="lv on">실측</span>';
+    $("#xbars").innerHTML = D.external.map(x => `<div class="xb"><span>${esc(x.name)}</span>
+      <span style="display:flex;flex-direction:column;gap:2px">
+        <span class="t" style="width:${(x.out || 0) / mx * 100}%"><span style="width:100%;background:var(--accent)"></span></span>
+        ${x.in != null ? `<span class="t" style="width:${x.in / mx * 100}%"><span style="width:100%;background:var(--q2)"></span></span>` : ""}
+      </span><span class="v" style="line-height:1.25">${(x.out / 1000).toFixed(1)}천<br>${x.in != null ? (x.in / 1000).toFixed(1) + "천" : "—"}</span></div>`).join("");
+    $("#xnote").innerHTML = `<span class="lg-item"><span class="sw" style="background:var(--accent)"></span>세종 → 시외(유출)</span> <span class="lg-item"><span class="sw" style="background:var(--q2)"></span>시외 → 세종(유입)</span><br>${D.commute.year} 인구총조사 12세 이상 통근·통학 인구(명). 유출 ${D.commute.out.toLocaleString("ko-KR")}명 · 유입 ${D.commute.in.toLocaleString("ko-KR")}명(유입은 대전·충북·충남에서 오는 것만 공표). 대전(남서)과의 연결이 청주·천안(북동)보다 강하다는 연구 결과(변은주 외, 2023)와 같은 방향입니다.`;
+    return;
+  }
   $("#xbars").innerHTML = D.external.map(x => {
     const sp = D.externalSplit[x.id] || {}; const s = Object.values(sp).reduce((a, v) => a + v, 0) || 1;
     return `<div class="xb"><span>${esc(x.name)}</span><span class="t" style="width:${x.trips / maxX * 100}%">${

@@ -62,6 +62,7 @@ def build_data(demo: bool = True) -> dict:
     apis = [dict(a) for a in LZ.APIS]
     asof, live_ind, counts, collected, points = {}, [], {}, None, {}
     lq, lq_live = LZ.LQ, False
+    external, commute = [dict(x) for x in LZ.EXTERNAL], None
     got = None if demo else _collected()
     if got:
         live_ind = got.get("live", [])
@@ -79,6 +80,12 @@ def build_data(demo: bool = True) -> dict:
                 a["status"] = "ok"
         asof, counts, collected = got.get("asof", {}), got.get("counts", {}), got.get("collected")
         points = got.get("points", {})
+        commute = got.get("commute")
+        if commute:
+            for x in external:
+                p = commute["partners"].get(x["id"], {})
+                x["out"], x["in"] = p.get("out"), p.get("in")
+                x["trips"] = round(((p.get("out") or 0) + (p.get("in") or 0)) / 1000, 1)
         if got.get("lq"):
             lq, lq_live = dict(got["lq"]), True
     admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
@@ -103,7 +110,8 @@ def build_data(demo: bool = True) -> dict:
         "anchors": LZ.ANCHORS,
         "anchorKinds": ANCHOR_KINDS,
         "flows": LZ.FLOWS,
-        "external": LZ.EXTERNAL,
+        "external": external,
+        "commute": commute,
         "externalSplit": LZ.EXTERNAL_SPLIT,
         "functions": LZ.FUNCTIONS,
         "planned": LZ.PLANNED,
