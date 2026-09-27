@@ -47,7 +47,12 @@ button{font:inherit;color:inherit}
 header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-block:28px 16px;border-bottom:1px solid var(--line)}
 header.top h1{font-family:var(--serif);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.01em;line-height:1.2}
 header.top .sub{color:var(--ink2);margin-top:6px;max-width:70ch}
-.hdr-right{display:flex;gap:8px;align-items:center}
+.hdr-right{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.hdr-side{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.sister{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.sister a{font-size:13px;font-weight:600;text-decoration:none;color:var(--accent)}
+.sister a:hover{text-decoration:underline}
+@media (max-width:860px){.hdr-side,.sister{align-items:flex-start}.hdr-right{justify-content:flex-start}}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12.5px}
 .btn:hover{border-color:var(--ink3)}
 .notice{margin-top:14px;border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:6px;padding:9px 14px;font-size:13px}
@@ -260,9 +265,16 @@ footer p{margin:0;max-width:90ch}
     <h1>세종 생활권 재구조화 상황판</h1>
     <div class="sub">행복도시 6개 생활권이 지금의 도시기능과 앞으로의 국가계획·세종시 계획을 담고 있는지 지표와 지도로 점검합니다. 경계를 다시 긋기 전에 생활권마다 맡은 역할과 생활권 사이의 연결, 광역권과의 관계부터 봅니다.</div>
   </div>
-  <div class="hdr-right">
-    <span class="small muted" id="stamp"></span>
-    <button class="btn" id="theme" type="button">화면 밝기</button>
+  <div class="hdr-side">
+    <nav class="sister" aria-label="함께 보는 세종 상황판">
+      <span class="eyebrow">함께 보는 상황판</span>
+      <a href="https://ysong86.github.io/water_sejong/" target="_blank" rel="noopener">세종시 물환경 상황판 ↗</a>
+      <a href="https://ysong86.github.io/traffic_sejong/" target="_blank" rel="noopener">세종시 교통안전 상황판 ↗</a>
+    </nav>
+    <div class="hdr-right">
+      <span class="small muted" id="stamp"></span>
+      <button class="btn" id="theme" type="button">화면 밝기</button>
+    </div>
   </div>
 </header>
 <div class="notice" id="notice" hidden></div>
@@ -789,7 +801,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), neis:"NEIS " + (a.neis || "")})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년"})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -920,7 +932,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   $("#api-note").textContent = nOk
     ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
     : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
-  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 정부청사관리본부(세종청사 연면적).";
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 통계청 SGIS·KOSIS, 정부청사관리본부(세종청사 연면적).";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */

@@ -306,6 +306,26 @@ def fetch_commute():
             "out": total - internal, "in": i.get("00", 0) - i.get("29010", 0), "partners": partners}
 
 
+SGIS = "https://sgisapi.mods.go.kr/OpenAPI3"
+
+
+def fetch_sgis_company():
+    """통계청 SGIS 사업체 통계(전국사업체조사) — 행정동별 사업체 수·종사자 수. 가장 최근 공표 연도."""
+    key, secret = _cfg("sgis_key"), _cfg("sgis_secret")
+    if not key or not secret:
+        return None
+    tok = _json(f"{SGIS}/auth/authentication.json?consumer_key={key}&consumer_secret={secret}")["result"]["accessToken"]
+    this = dt.date.today().year
+    for yr in range(this - 1, this - 5, -1):
+        d = _json(f"{SGIS}/stats/company.json?accessToken={tok}&year={yr}&adm_cd=29010&low_search=1")
+        if d.get("result"):
+            rows = [{"name": r["adm_nm"], "corp": int(r["corp_cnt"]), "worker": int(r["tot_worker"])}
+                    for r in d["result"] if str(r.get("tot_worker", "")).isdigit()]
+            _save_raw("sgis_company", {"year": str(yr), "rows": rows})
+            return {"year": str(yr), "rows": rows}
+    return None
+
+
 def load_libraries():
     """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
     with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
@@ -505,7 +525,7 @@ def classify(b):
 
 
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=(), blds=(), schools=()) -> dict:
+            parks=(), libs=(), blds=(), schools=(), company=None) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -727,6 +747,29 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
                 units[u]["jhr"] = round(nonres / d["tot"] * 100)
                 units[u]["pub"] = round((d[0] + d[2] + d[3]) / nonres * 100) if nonres > 0 else None
         floor_out["_gov_extra"] = round(extra)
+    # SGIS 종사자 → 직주비(종사자 ÷ 주민등록 인구). 공표 연도의 행정동 체계가 지금과 다를 수 있어
+    # 없는 행정동은 CHG_GROUPS(분동 전 묶음)로 합쳐 같은 값을 준다. 어진동은 도담·어진동에 더한다.
+    if company:
+        name2unit = {a["name"]: a["name"] for a in LZ.ADMIN}
+        name2unit.update({"도담동": "도담·어진동", "어진동": "도담·어진동"})
+        work = {}
+        for r in company["rows"]:
+            u = name2unit.get(r["name"])
+            if u:
+                work[u] = work.get(u, 0) + r["worker"]
+        for g in LZ.CHG_GROUPS:
+            if any(u not in work for u in g):
+                tot_w = sum(work.get(u, 0) for u in g)
+                tot_p = sum(units[u].get("pop") or 0 for u in g)
+                for u in g:
+                    units[u]["emp"] = round(tot_w / tot_p, 2) if tot_p else None
+                    units[u]["workers"] = tot_w
+        for u, w in work.items():
+            if "emp" in units[u]:
+                continue
+            if units[u].get("pop"):
+                units[u]["emp"] = round(w / units[u]["pop"], 2)
+                units[u]["workers"] = w
     points = {
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
@@ -736,7 +779,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     return {
         "lq": lq, "floor": floor_out,
         "points": points,
-        "asof": {"neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
+        "asof": {"sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
@@ -749,7 +792,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"]}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"], "sgis": ["emp"]}
 
 
 def collect() -> dict:
@@ -783,8 +826,11 @@ def collect() -> dict:
     print("학교(NEIS) …")
     schools = fetch_schools()
     print("  학교", len(schools), "좌표 실패", sum(1 for x in schools if x["lon"] is None))
+    print("사업체·종사자(SGIS) …")
+    company = fetch_sgis_company()
+    print("  기준", company and company["year"], "행정동", company and len(company["rows"]))
     res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
-                  schools)
+                  schools, company)
     print("통근·통학(KOSIS) …")
     res["commute"] = fetch_commute()
     res["sources"] = list(LIVE_IND) + (["kosis"] if res["commute"] else [])
