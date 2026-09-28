@@ -371,6 +371,69 @@ def fetch_vacancy():
     return out
 
 
+def load_od(year="2024"):
+    """KTDB 대전세종충청권 여객 OD 에서 뽑아 둔 세종 관련 행(tools/ktdb_extract.py)."""
+    path = os.path.join(RAW, "ktdb", f"sejong_od_{year}.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def analyze_od(od, units):
+    """생활권 간 통행 흐름, 행정동별 다른 생활권 통행 비중·시외 통근 비중·대중교통 분담률."""
+    import livingzone as LZ
+    Z = {int(k): v for k, v in od["zones"].items()}
+    SJ = set(od["sejong"])
+    # KTDB 존(행정동) → 우리 지도 단위·생활권. 도담·어진은 합치고, 반곡 존(분동 전)은 반곡·집현 둘 다에 준다.
+    name2units = {a["name"]: [a["name"]] for a in LZ.ADMIN}
+    name2units.update({"도담동": ["도담·어진동"], "어진동": ["도담·어진동"], "반곡동": ["반곡동", "집현동"]})
+    zu = {z: name2units.get(Z[z]["dong"], []) for z in SJ}
+    zzone = {z: (LZ.ADMIN_ZONE.get(zu[z][0]) if zu[z] else None) for z in SJ}
+    H = od["obj_head"]
+    i_work, i_home, i_tot = H.index("출근"), H.index("귀가"), H.index("합계")
+    flows, agg = {}, {}
+    for r in od["obj"]:
+        o, d = r[0], r[1]
+        if o in SJ and d in SJ and zzone[o] and zzone[d] and zzone[o] != zzone[d]:
+            key = tuple(sorted((zzone[o], zzone[d])))
+            flows[key] = flows.get(key, 0.0) + r[i_tot]
+        if o in SJ and zu[o]:
+            a = agg.setdefault(zu[o][0], {"act": 0.0, "act_other": 0.0, "work": 0.0, "work_out": 0.0})
+            act = r[i_tot] - r[i_home]              # 귀가를 뺀 활동 통행
+            a["act"] += act
+            if d in SJ and zzone.get(d) and zzone[d] != zzone[o]:
+                a["act_other"] += act
+            a["work"] += r[i_work]
+            if d not in SJ:
+                a["work_out"] += r[i_work]
+    MH = od["mod_head"]
+    modes = MH[2:9]                                  # 도보/자전거 … 기타 (뒤 두 칸은 묶음 합계)
+    transit_cols = [MH.index(m) for m in ("버스", "일반/고속철도", "도시철도") if m in MH]
+    tr = {}
+    for r in od["mod"]:
+        o = r[0]
+        if o in SJ and zu[o]:
+            t = tr.setdefault(zu[o][0], [0.0, 0.0])
+            t[0] += sum(r[2:2 + len(modes)])
+            t[1] += sum(r[c] for c in transit_cols)
+    for z in SJ:
+        if not zu[z]:
+            continue
+        a, t = agg.get(zu[z][0]), tr.get(zu[z][0])
+        for u in zu[z]:
+            if u not in units:
+                continue
+            if a and a["act"] > 0:
+                units[u]["inter"] = round(a["act_other"] / a["act"] * 100)
+            if a and a["work"] > 0:
+                units[u]["outc"] = round(a["work_out"] / a["work"] * 100)
+            if t and t[0] > 0:
+                units[u]["transit"] = round(t[1] / t[0] * 100, 1)
+    return {"year": od["sheet"], "flows": [[a, b, round(v / 1000, 1)] for (a, b), v in
+                                           sorted(flows.items(), key=lambda x: -x[1])]}
+
+
 def load_libraries():
     """전국도서관표준데이터(사용자가 내려받은 파일)에서 뽑은 세종 도서관. API 가 아니라 파일이다."""
     with open(os.path.join(HERE, "assets", "sejong_libraries.json"), encoding="utf-8") as f:
@@ -611,7 +674,8 @@ def classify(b):
 
 
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=(), blds=(), schools=(), company=None, vacancy=None, permits=(), housing=()) -> dict:
+            parks=(), libs=(), blds=(), schools=(), company=None, vacancy=None, permits=(), housing=(),
+            od=None) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -1007,6 +1071,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
                 "hs_due": dict(sorted(d["sched"].items())),
                 "hs_rate": round(v["hh_built"] / (v["hh_built"] + pipe) * 100) if v["hh_built"] + pipe > 0 and z != "R" else None,
             })
+    od_res = analyze_od(od, units) if od else None
     points = {
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
@@ -1014,10 +1079,10 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         "school": [{"n": s["name"], "t": s["kind"], "lon": lon, "lat": lat} for lon, lat, s in sch_pts],
     }
     return {
-        "lq": lq, "floor": floor_out, "progress": progress,
+        "lq": lq, "floor": floor_out, "progress": progress, "od": od_res,
         "points": points,
         "vacancy": vacancy,
-        "asof": {"hs": dt.date.today().strftime("%Y-%m-%d"), "arch": dt.date.today().strftime("%Y-%m-%d"), "reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
+        "asof": {"ktdb": (od or {}).get("sheet", ""), "hs": dt.date.today().strftime("%Y-%m-%d"), "arch": dt.date.today().strftime("%Y-%m-%d"), "reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
@@ -1030,7 +1095,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt", "urb"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub", "recent", "occ"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"], "arch": [], "hs": []}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt", "urb"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub", "recent", "occ"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"], "arch": [], "hs": [], "ktdb": ["inter", "outc", "transit"]}
 
 
 def collect() -> dict:
@@ -1076,7 +1141,7 @@ def collect() -> dict:
     permits = fetch_permits(key)
     print("  인허가", len(permits))
     res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
-                  schools, company, vacancy, permits, housing)
+                  schools, company, vacancy, permits, housing, load_od())
     print("통근·통학(KOSIS) …")
     res["commute"] = fetch_commute()
     res["sources"] = list(LIVE_IND) + (["kosis"] if res["commute"] else [])

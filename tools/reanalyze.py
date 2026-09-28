@@ -46,13 +46,14 @@ def main(argv):
     res = collect.analyze(p["ym"], p["now"], p["before"], a["items"], sb["stdrYm"], sb["items"],
                           raw("tago")["items"], raw("rtms")["items"], raw("hira")["items"],
                           raw("kspo")["items"], raw("park")["items"], collect.load_libraries(),
-                          raw("bld")["items"], schools, company, vacancy, permits, housing)
+                          raw("bld")["items"], schools, company, vacancy, permits, housing, collect.load_od())
     path = os.path.join(HERE, "data", "latest.json")
     with open(path, encoding="utf-8") as f:
         old = json.load(f)
     res["commute"] = commute or old.get("commute")
     res["collected"] = old.get("collected") or dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    res["sources"] = [s for s in collect.LIVE_IND if (s != "arch" or permits) and (s != "hs" or housing)] + (["kosis"] if res["commute"] else [])
+    res["sources"] = [s for s in collect.LIVE_IND if (s != "arch" or permits) and (s != "hs" or housing)
+                      and (s != "ktdb" or res.get("od"))] + (["kosis"] if res["commute"] else [])
     res["live"] = [i for ids in collect.LIVE_IND.values() for i in ids]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=1)

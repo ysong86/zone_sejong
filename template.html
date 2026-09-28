@@ -370,7 +370,7 @@ footer p{margin:0;max-width:90ch}
   </div>
   <div class="two">
     <div class="card">
-      <h3>생활권 간 통행(천 통행/일, 양방향 합) <span class="lv off">샘플</span></h3>
+      <h3 id="mx-h">생활권 간 통행(천 통행/일, 양방향 합) <span class="lv off">샘플</span></h3>
       <div class="scroll-x"><table class="mx" id="matrix"></table></div>
       <p class="small muted" id="mx-note" style="margin:8px 0 0"></p>
     </div>
@@ -457,7 +457,9 @@ $("#stamp").textContent = D.meta.demo ? "샘플 자료 · 화면 생성 " + D.me
   } else {
     const a = D.meta.asof || {}, c = D.meta.counts || {};
     const nLive = D.indicators.filter(i => isLive(i.id)).length, nAll = D.indicators.length;
-    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 학교 ${(c.schools||0)}곳, 건축물 ${(c.buildings||0).toLocaleString("ko-KR")}동, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월)을 반영했습니다. 지표 목록의 <span class="lv off">샘플</span> 지표${D.lqLive ? "" : "와 생활권 진단의 특화도(방사형 그래프)"}, 생활권 간·광역 통행 흐름은 아직 예시 수치입니다.`;
+    n.innerHTML = `<b>지표 ${nAll}개 가운데 ${nLive}개가 실측입니다.</b> 주민등록 인구·연령(${ymText(a.mois_pop)} 말), 상가 ${(c.stores||0).toLocaleString("ko-KR")}곳(${ymText(a.sbiz)}), 버스정류장 ${(c.stops||0).toLocaleString("ko-KR")}곳, 의료기관 ${(c.hospitals||0).toLocaleString("ko-KR")}곳, 체육시설 ${(c.sports||0).toLocaleString("ko-KR")}곳, 도서관 ${(c.libraries||0)}곳, 도시공원 ${(c.parks||0)}곳, 학교 ${(c.schools||0)}곳, 건축물 ${(c.buildings||0).toLocaleString("ko-KR")}동, 아파트 실거래 ${(c.trades||0).toLocaleString("ko-KR")}건(최근 12개월), 통행 OD(KTDB ${esc(a.ktdb || "")})를 반영했습니다. ${nLive === nAll && D.lqLive && D.flowsLive
+      ? "지표·특화도·통행 흐름 모두 실제 자료입니다. 다만 생활권 진단 문구와 개선방향은 연구모임 검토 전 초안입니다."
+      : `지표 목록의 <span class="lv off">샘플</span> 지표${D.lqLive ? "" : "와 생활권 진단의 특화도(방사형 그래프)"}${D.flowsLive ? "" : ", 생활권 간 통행 흐름"}은 아직 예시 수치입니다.`}`;
   }
 }
 
@@ -481,6 +483,7 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
   const weak = lqPlan.filter(x => x.v < 1);
   const tot = D.flows.reduce((a, f) => a + f[2], 0);
   const core = D.flows.filter(f => ["1","2","3"].includes(f[0]) && ["1","2","3"].includes(f[1])).reduce((a,f)=>a+f[2],0);
+  function hubShare(){ const t = D.flows.reduce((a, f) => a + f[2], 0); const h = D.flows.filter(f => f[0] === "1" || f[1] === "1").reduce((a, f) => a + f[2], 0); return Math.round(h / t * 100); }
   const xt = D.commute ? D.commute.out : D.external.reduce((a, x) => a + x.trips, 0);
   const dj = D.external.find(x => x.id === "dj");
   const djv = D.commute ? dj.out : dj.trips;
@@ -497,8 +500,10 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
      p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권. " +
         "다만 둘 다 조성 중이라 바로 판정하지 않고 진척도 대비 형성도를 점검합니다.",
      ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
-    {k:"B", big: Math.round(core / tot * 100) + "<small>% (샘플)</small>",
-     p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중(예시값 — 통행 O/D 자료 확보 전). 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
+    {k:"B", big: D.flowsLive ? hubShare() + "<small>% 1생활권 경유</small>" : Math.round(core / tot * 100) + "<small>% (샘플)</small>",
+     p: D.flowsLive
+       ? "생활권 사이를 오가는 하루 통행 가운데 1생활권이 한쪽 끝인 비중(KTDB 2024). 1생활권이 연계의 허브이고, 2↔3·2↔4처럼 이웃한 생활권끼리의 직접 연결은 약합니다."
+       : "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중(예시값 — 통행 O/D 자료 확보 전). 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
      ask:"BRT 순환축을 생활권 사이의 중심으로 쓸 것인가?"},
     {k:"C", big: Math.round(djv / xt * 100) + "<small>% 대전</small>",
      p: D.commute
@@ -850,7 +855,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), arch:"건축인허가 " + (a.arch || ""), hs:"주택인허가 " + (a.hs || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년", reb:"부동산원 " + (a.reb || "")})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), arch:"건축인허가 " + (a.arch || ""), ktdb:"KTDB OD " + (a.ktdb || ""), hs:"주택인허가 " + (a.hs || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년", reb:"부동산원 " + (a.reb || "")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){
@@ -986,7 +991,14 @@ function zoneStats(zid){
   const tot = D.flows.reduce((a, f) => a + f[2], 0);
   const by = {}; D.flows.forEach(([a, b, v]) => { by[a] = (by[a] || 0) + v; by[b] = (by[b] || 0) + v; });
   const weakest = ["4","5","6"].map(i => `${ZONE[i].name} ${by[i] || 0}`).join(" · ");
-  $("#mx-note").textContent = `생활권 간 통행 합 ${tot}천/일. 순환 구조의 동쪽 절반 — ${weakest}(천/일, 연결된 통행 합) — 이 가장 약합니다.`;
+  if (D.flowsLive) {
+    $("#mx-h").innerHTML = '생활권 간 통행(천 통행/일, 양방향 합) <span class="lv on">실측</span> <span class="small muted">KTDB 2024</span>';
+    const nm = f => ZONE[f[0]].name.replace("생활권", "").replace("읍면지역", "읍면") + "↔" + ZONE[f[1]].name.replace("생활권", "").replace("읍면지역", "읍면");
+    const srt = [...D.flows].sort((a, b) => b[2] - a[2]);
+    $("#mx-note").textContent = `생활권 사이 하루 통행 ${tot.toFixed ? Math.round(tot).toLocaleString("ko-KR") : tot}천. 가장 강한 연결: ${srt.slice(0, 3).map(f => nm(f) + " " + f[2]).join(", ")}. 가장 약한 연결: ${srt.slice(-3).reverse().map(f => nm(f) + " " + f[2]).join(", ")} (천/일). 1생활권이 허브 역할을 하고, 이웃한 생활권끼리 바로 오가는 통행은 적습니다.`;
+  } else {
+    $("#mx-note").textContent = `생활권 간 통행 합 ${tot}천/일. 순환 구조의 동쪽 절반 — ${weakest}(천/일, 연결된 통행 합) — 이 가장 약합니다.`;
+  }
   const maxX = Math.max(...D.external.map(x => x.trips));
   if (D.commute) {
     const mx = Math.max(...D.external.map(x => Math.max(x.out || 0, x.in || 0)));
