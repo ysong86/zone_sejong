@@ -435,6 +435,26 @@ def fetch_permits(key):
     return out
 
 
+HS_URL = ("https://apis.data.go.kr/1613000/HsPmsHubService/getHpBasisOulnInfo"
+          "?serviceKey={k}&sigunguCd=36110&bjdongCd={bj}&numOfRows=1000&pageNo={page}&_type=json")
+HS_KEEP = ("platPlc", "bldNm", "splotNm", "block", "purpsCdNm", "totArea", "totHhldCnt",
+           "apprvDay", "stcnsSchedDay", "stcnsDay", "useInsptSchedDay", "useInsptDay")
+
+
+def fetch_housing(key):
+    """건축HUB 주택인허가(주택법 사업계획승인, 30세대 이상 공동주택) — 승인·착공했지만 사용검사 전인 단지."""
+    out = []
+    for bj in _bld_codes(key):
+        def pick(d):
+            b = d["response"]["body"]
+            it = (b["items"].get("item") or []) if isinstance(b.get("items"), dict) else []
+            return ([it] if isinstance(it, dict) else it), int(b.get("totalCount", 0))
+        items, _ = _paged(HS_URL.replace("{bj}", bj), key, pick)
+        out += [{f: it.get(f) for f in HS_KEEP} for it in items]
+    _save_raw("housing", {"items": out})
+    return out
+
+
 def fetch_trades(key, ym_end, months=12):
     out = []
     for i in range(months):
@@ -591,7 +611,7 @@ def classify(b):
 
 
 def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, hosps, sports,
-            parks=(), libs=(), blds=(), schools=(), company=None, vacancy=None, permits=()) -> dict:
+            parks=(), libs=(), blds=(), schools=(), company=None, vacancy=None, permits=(), housing=()) -> dict:
     import livingzone as LZ
     with open(os.path.join(HERE, "assets", "sejong_units.json"), encoding="utf-8") as f:
         shapes = {u["name"]: u for u in json.load(f)["units"]}
@@ -950,6 +970,43 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
                 # 준공 ÷ (준공 + 짓는 중 + 허가) — 지금 보이는 물량 기준의 건설 진척률
                 "build_rate": round(done / (done + inflow) * 100) if done + inflow > 0 else None,
             })
+    # 주택 파이프라인: 사업계획승인(2018년~)을 받았지만 사용검사 전인 단지의 세대
+    if housing and progress:
+        zl = {u: z["id"] for z in LZ.ZONES for u in z["units"]}
+        zl.update({"어진동": "1", "가람동": "2"})
+        hp = {}
+        for h in housing:
+            if (h.get("useInsptDay") or "").strip() or (h.get("apprvDay") or "")[:4] < PIPE_FROM:
+                continue
+            n = int(h.get("totHhldCnt") or 0)
+            parts = (h.get("platPlc") or "").split()
+            z = zl.get(parts[1] if len(parts) > 1 else "")
+            if not z or n <= 0:
+                continue
+            yr = (h.get("useInsptSchedDay") or "").strip()[:4]
+            this_year = str(dt.date.today().year)
+            # 사용검사 예정일이 이미 지났는데 사용검사일이 비어 있으면 갱신이 안 된 기록으로 본다(실제로는 입주 완료).
+            # 예정일이 없으면 최근 3년 안에 승인된 단지만 남긴다.
+            if yr and yr < this_year:
+                continue
+            if not yr and (h.get("apprvDay") or "")[:4] < str(dt.date.today().year - 3):
+                continue
+            d = hp.setdefault(z, {"started": 0, "approved": 0, "sched": {}, "units": []})
+            # 착공일 칸은 거의 비어 있어, 착공 예정일이 지났으면 착공으로 본다(참고용).
+            sd = (h.get("stcnsDay") or h.get("stcnsSchedDay") or "").strip()
+            started = bool(sd) and sd <= dt.date.today().strftime("%Y%m%d")
+            d["started" if started else "approved"] += n
+            if yr:
+                d["sched"][yr] = d["sched"].get(yr, 0) + n
+            d["units"].append({"n": (h.get("bldNm") or "").strip()[:40], "hh": n, "started": started, "due": yr})
+        for z, v in progress.items():
+            d = hp.get(z, {"started": 0, "approved": 0, "sched": {}, "units": []})
+            pipe = d["started"] + d["approved"]
+            v.update({
+                "hs_started": d["started"], "hs_approved": d["approved"],
+                "hs_due": dict(sorted(d["sched"].items())),
+                "hs_rate": round(v["hh_built"] / (v["hh_built"] + pipe) * 100) if v["hh_built"] + pipe > 0 and z != "R" else None,
+            })
     points = {
         "park": [{"n": p.get("nm"), "t": p.get("se"), "a": p.get("ar"), "lon": p["lo"], "lat": p["la"]}
                  for p in parks if p.get("lo") and p.get("la")],
@@ -960,7 +1017,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         "lq": lq, "floor": floor_out, "progress": progress,
         "points": points,
         "vacancy": vacancy,
-        "asof": {"arch": dt.date.today().strftime("%Y-%m-%d"), "reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
+        "asof": {"hs": dt.date.today().strftime("%Y-%m-%d"), "arch": dt.date.today().strftime("%Y-%m-%d"), "reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
                  "lib": max((r.get("데이터기준일자") or "" for r in libs), default=""), "kspo": dt.date.today().strftime("%Y-%m-%d"), "hira": dt.date.today().strftime("%Y-%m-%d"), "mois_pop": pop_ym, "mois_age": pop_ym, "sbiz": store_ym,
                  "tago": dt.date.today().strftime("%Y-%m-%d"), "rtms": f"{_shift(pop_ym, -11)}~{pop_ym}"},
         "counts": {"stores": len(st_pts), "stops": len(stop_pts), "brt_stops": len(brt_pts),
@@ -973,7 +1030,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt", "urb"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub", "recent", "occ"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"], "arch": []}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt", "urb"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub", "recent", "occ"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"], "arch": [], "hs": []}
 
 
 def collect() -> dict:
@@ -1012,11 +1069,14 @@ def collect() -> dict:
     print("  기준", company and company["year"], "행정동", company and len(company["rows"]))
     print("상가 공실률(R-ONE) …")
     vacancy = fetch_vacancy()
+    print("주택인허가(사업계획승인) …")
+    housing = fetch_housing(key)
+    print("  주택 인허가", len(housing))
     print("건축인허가(파이프라인) …")
     permits = fetch_permits(key)
     print("  인허가", len(permits))
     res = analyze(pop_ym, now, before, age, store_ym, stores, stops, trades, hosps, sports, parks, libs, blds,
-                  schools, company, vacancy, permits)
+                  schools, company, vacancy, permits, housing)
     print("통근·통학(KOSIS) …")
     res["commute"] = fetch_commute()
     res["sources"] = list(LIVE_IND) + (["kosis"] if res["commute"] else [])
