@@ -120,7 +120,7 @@ def build_data(demo: bool = True) -> dict:
         "floor": (got or {}).get("floor", {}),
         "progress": (got or {}).get("progress", {}),
         "stages": LZ.STAGES,
-        "plan": LZ.PLAN, "planSource": LZ.PLAN_SOURCE,
+        "plan": LZ.PLAN, "planSource": LZ.PLAN_SOURCE, "planArea": LZ.PLAN_AREA_M2,
         "diagnosis": LZ.DIAGNOSIS,
         "typeNames": TYPE_NAMES,
         "theory": LZ.THEORY,
