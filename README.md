@@ -45,3 +45,14 @@ C:\Python313\python.exe run.py --live     data/latest.json 실측을 반영해 �
   읍면은 BRT 순환축 밖이라 BRT 도보를 계산하지 않는다.
 - 1년 증감은 분동 전과 비교해야 해서 반곡·집현을 한 묶음으로 계산한다(`CHG_GROUPS`).
 - OSM 에 **어진동·가람동 경계가 없습니다**. 나성동·세종동 면은 `make_zones.py` 가 겹침을 빼서 정리합니다.
+
+## 공개 화면은 비밀번호로 암호화
+
+GitHub Pages 에는 `dashboard.html` 을 그대로 올리지 않는다. 갱신 순서:
+
+```
+C:\Python313\python.exe run.py --live            # dashboard.html (평문, 저장소에 안 올라감)
+C:\Python313\python.exe tools/encrypt_page.py    # → site/index.html (AES-GCM 암호화)
+```
+그다음 `site/index.html` 을 gh-pages 의 index.html 로 덮어쓴다.
+비밀번호는 `config.json` 의 `page_password`. 바꾸면 다시 암호화해서 올리면 되고, 예전 비밀번호로 저장된 브라우저는 자동으로 다시 묻는다.
