@@ -21,7 +21,7 @@ ANCHOR_KINDS = {
     "industry": {"name": "산업단지", "color": "#7D6B4A"},
     "transport": {"name": "고속철도 관문", "color": "#3B4652"},
 }
-TYPE_NAMES = {"keep": "유지·고도화", "boost": "보강", "shift": "전환·재정의"}
+TYPE_NAMES = {"keep": "유지·고도화", "boost": "보강", "shift": "전환·재정의", "watch": "조성단계 점검"}
 API_STATUS = {
     "403": {"name": "활용신청 필요", "cls": "s403"},
     "todo": {"name": "주소 확인 전", "cls": "stodo"},
@@ -118,6 +118,9 @@ def build_data(demo: bool = True) -> dict:
         "lq": lq,
         "lqLive": lq_live,
         "floor": (got or {}).get("floor", {}),
+        "progress": (got or {}).get("progress", {}),
+        "stages": LZ.STAGES,
+        "plan": LZ.PLAN, "planSource": LZ.PLAN_SOURCE,
         "diagnosis": LZ.DIAGNOSIS,
         "typeNames": TYPE_NAMES,
         "theory": LZ.THEORY,

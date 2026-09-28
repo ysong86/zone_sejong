@@ -63,7 +63,7 @@ header.top .sub{color:var(--ink2);margin-top:6px;max-width:70ch}
 .brief .lead{font-size:15px;color:var(--ink)}
 .brief .lead p{margin:0 0 10px}
 .brief .lead .q{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.5;margin-bottom:12px}
-.axes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.axes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .axis{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
 .axis .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent)}
 .axis .tag i{font-style:normal;font-family:var(--mono);background:var(--accent-soft);border-radius:4px;padding:0 6px}
@@ -153,6 +153,17 @@ svg#map.drag{cursor:grabbing}
 .p-keep{background:var(--good-soft);color:var(--good)}
 .p-boost{background:var(--warn-soft);color:var(--warn)}
 .p-shift{background:var(--bad-soft);color:var(--bad)}
+.p-watch{background:var(--accent-soft);color:var(--accent)}
+.stage{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;border:1px solid var(--line);color:var(--ink2);background:var(--panel2)}
+.stage.building,.stage.early{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+table.prog{border-collapse:collapse;width:100%;font-size:12.5px;min-width:820px}
+table.prog th{font-weight:600;color:var(--ink3);font-size:11.5px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:bottom}
+table.prog td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.prog td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.pbar{display:flex;align-items:center;gap:6px}
+.pbar i{display:block;height:8px;border-radius:2px;background:var(--q3)}
+.pbar s{display:block;height:8px;flex:1;background:var(--line2);border-radius:2px;text-decoration:none;position:relative}
+.pbar s i{position:absolute;left:0;top:0}
 
 /* 순위 막대 */
 .rankbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:14px}
@@ -207,7 +218,7 @@ table.mx td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .ichip:hover{background:var(--accent-soft)}
 
 /* 개선방향 */
-.strat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.strat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .scol h3{font-size:15px;font-weight:700;display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .scol h3 i{font-style:normal;font-family:var(--mono);font-size:12px;background:var(--accent);color:var(--panel);border-radius:4px;padding:0 6px}
 .st{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
@@ -241,6 +252,7 @@ footer p{margin:0;max-width:90ch}
   .bench{grid-template-columns:220px minmax(0,1fr)}
   .detail{grid-column:1/-1}
   .zgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .axes,.strat{grid-template-columns:repeat(2,minmax(0,1fr))}
   .cases{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:860px){
@@ -283,7 +295,7 @@ footer p{margin:0;max-width:90ch}
   <div class="lead">
     <div class="q">"6개 생활권 체계가 지금의 도시기능과 앞으로의 국가계획을 담고 있는가?"</div>
     <p>행복도시는 중앙녹지를 비워 두고 둘레에 여섯 개의 <b>기능 생활권</b>을 배치했습니다. 20년이 지나며 국회세종의사당·대통령 세종집무실 같은 국가중추기능이 새로 들어오고, 세종시는 읍면까지 포함한 시 전체를 행복도시와 다른 생활권 체계로 나눠 보고 있습니다. 대전·청주와의 광역 관계도 달라졌습니다.</p>
-    <p class="small muted">그래서 이 상황판은 경계 조정을 출발점으로 삼지 않습니다. 아래 세 축으로 먼저 진단하고, 축마다 국내외 이론에 근거한 지표를 붙였습니다.</p>
+    <p class="small muted">그래서 이 상황판은 경계 조정을 출발점으로 삼지 않습니다. <b>① 개발·건설 진척도 → ② 계획기능 실현도 → ③ 생활권 간 연계 → ④ 국가중추·광역 관계</b> 순서로 진단하고, 단계마다 국내외 이론에 근거한 지표를 붙였습니다. 진척도를 먼저 보는 것은 아직 조성 중인 생활권(4·5·6)을 성숙한 생활권(1·2·3)과 같은 잣대로 판정하지 않기 위해서입니다.</p>
   </div>
   <div class="axes" id="axes"></div>
 </div>
@@ -314,17 +326,26 @@ footer p{margin:0;max-width:90ch}
   </div>
 </section>
 
+<section id="progress-sec">
+  <div class="sec-h">
+    <h2>① 개발·건설 진척도 — 생활권이 어느 단계에 있나</h2>
+    <div class="note">건축물대장(준공 연면적·세대·사용승인일)과 주민등록으로 계산했습니다. 조성 단계는 최근 5년 준공 비중으로 나눕니다: 25% 미만 <span class="stage">성숙</span> · 25~50% <span class="stage">조성 후기</span> · 50% 이상 <span class="stage building">조성 중</span> · 등재 연면적 10만㎡ 미만 <span class="stage early">초기 조성</span></div>
+  </div>
+  <div class="card scroll-x"><table class="prog" id="prog"></table>
+    <p class="small muted" id="prog-note" style="margin:8px 0 0"></p></div>
+</section>
+
 <section>
   <div class="sec-h">
-    <h2>생활권 진단 — 계획기능 대비 실제</h2>
-    <div class="note"><span id="lq-src"></span>방사형 그래프는 여섯 기능의 특화도(LQ, 점선 원 = 세종 평균 1.0)입니다. 굵은 축이 그 생활권에 계획된 기능입니다. 판정: <span class="pill p-keep">유지·고도화</span> <span class="pill p-boost">보강</span> <span class="pill p-shift">전환·재정의</span></div>
+    <h2>② 계획기능 실현도 — 생활권 진단</h2>
+    <div class="note"><span id="lq-src"></span>방사형 그래프는 여섯 기능의 특화도(LQ, 점선 원 = 세종 평균 1.0)입니다. 굵은 축이 그 생활권에 계획된 기능입니다. 판정: <span class="pill p-keep">유지·고도화</span> <span class="pill p-boost">보강</span> <span class="pill p-shift">전환·재정의</span> <span class="pill p-watch">조성단계 점검</span>(조성 중 생활권은 바로 판정하지 않음)</div>
   </div>
   <div class="zgrid" id="zones"></div>
 </section>
 
 <section>
   <div class="sec-h">
-    <h2>연계 구조 — 생활권 사이, 그리고 광역</h2>
+    <h2>③ 생활권 간 연계 · ④ 국가중추·광역 관계</h2>
     <div class="note">형태적으로 여러 중심이 '있는 것'과 기능적으로 서로 '주고받는 것'은 다릅니다(Burger &amp; Meijers, 2012). 흐름은 지도에서도 켤 수 있습니다.</div>
   </div>
   <div class="two">
@@ -443,10 +464,18 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
   const xt = D.commute ? D.commute.out : D.external.reduce((a, x) => a + x.trips, 0);
   const dj = D.external.find(x => x.id === "dj");
   const djv = D.commute ? dj.out : dj.trips;
+  const PR = D.progress || {};
+  const building = Object.entries(PR).filter(([z, v]) => ["building", "early"].includes(v.stage) && D.planned[z] != null).map(([z]) => z).sort();
+  const rec = z => (PR[z] || {}).recent;
   const cards = [
+    {k:"P", big: building.length + "<small>곳 조성 중</small>",
+     p: Object.keys(PR).length
+       ? `최근 5년 안에 준공된 연면적 비중이 ${["4","6"].filter(z => rec(z) != null).map(z => z + "생활권 " + rec(z) + "%").join(", ")}로, 1~3생활권(${["1","2","3"].map(rec).filter(v => v != null).join("·")}%)보다 훨씬 높습니다. 5생활권은 준공 건물이 거의 없는 초기 조성 단계입니다.`
+       : "건축물대장 연동 뒤 계산됩니다.",
+     ask:"조성 단계에 맞는 잣대로 계획기능을 볼 것인가?"},
     {k:"A", big: weak.length + `<small>/ ${lqPlan.length}개 생활권</small>`,
-     p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권." +
-        (weak.some(x => (D.floor[x.z.id] || {}).thin) ? " (5생활권은 등재 건물이 아직 거의 없습니다.)" : ""),
+     p: "계획기능 특화도가 세종 평균(LQ 1.0)에도 못 미치는 생활권: " + weak.map(x => x.z.name.replace("생활권","")).join("·") + "생활권. " +
+        "다만 둘 다 조성 중이라 바로 판정하지 않고 진척도 대비 형성도를 점검합니다.",
      ask:"생활권마다 맡길 역할을 다시 정할 것인가?"},
     {k:"B", big: Math.round(core / tot * 100) + "<small>% (샘플)</small>",
      p: "생활권 간 통행 가운데 1·2·3생활권끼리 오가는 비중(예시값 — 통행 O/D 자료 확보 전). 4·5·6생활권은 순환 구조에서 떨어져 있습니다.",
@@ -458,7 +487,7 @@ function unitLabel(id){ const u = IND[id].unit; return u === "명" || u === "만
      ask:"국가중추기능과 광역 관계를 생활권 위계에 넣을 것인가?"},
   ];
   $("#axes").innerHTML = cards.map(c => `
-    <div class="axis"><span class="tag"><i>${c.k}</i>${esc(D.axes[c.k].short)}</span>
+    <div class="axis"><span class="tag"><i>${esc(D.axes[c.k].no || c.k)}</i>${esc(D.axes[c.k].short)}</span>
       <h3>${esc(D.axes[c.k].name)}</h3>
       <div class="big">${c.big}</div>
       <p>${esc(c.p)}</p>
@@ -684,8 +713,8 @@ function views(){
 const LAYERS = [["zone","생활권 경계"],["anchor","거점"],["park","도시공원"],["lib","도서관"],["school","초등학교"],["flow","생활권 간 흐름"],["ext","광역 흐름"],["road","간선·BRT"],["name","동 이름"]];
 function rail(){
   let h = "";
-  for (const ax of ["A","B","C"]) {
-    h += `<div class="axis-h"><i>${ax}</i>${esc(D.axes[ax].name)}</div>`;
+  for (const ax of ["P","A","B","C"]) {
+    h += `<div class="axis-h"><i>${esc(D.axes[ax].no)}</i>${esc(D.axes[ax].name)}</div>`;
     h += D.indicators.filter(i => i.axis === ax).map(i =>
       `<button class="ind" type="button" data-i="${i.id}" aria-pressed="${state.ind === i.id}"><span class="nm">${esc(i.name)}${D.meta.demo ? "" : (isLive(i.id) ? '<span class="lv on">실측</span>' : '<span class="lv off">샘플</span>')}</span><span class="u">${esc(i.unit)}</span></button>`).join("");
   }
@@ -780,8 +809,8 @@ function detail(){
   if (dg) h += `<div class="small"><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span> ${esc(dg.head)}</div>`;
   if (u.note) h += `<div class="small muted" style="margin-top:4px">${esc(u.note)}</div>`;
   if (u.legal && u.legal.length > 1) h += `<div class="small muted">관할 법정동: ${esc(u.legal.join("·"))}</div>`;
-  for (const ax of ["A","B","C"]) {
-    h += `<h4>${ax} · ${esc(D.axes[ax].short)}</h4><div class="kv">`;
+  for (const ax of ["P","A","B","C"]) {
+    h += `<h4>${esc(D.axes[ax].no)} ${esc(D.axes[ax].short)}</h4><div class="kv">`;
     for (const i of D.indicators.filter(i2 => i2.axis === ax)) {
       const v = u[i.id], all = NAMES.map(m => UNITS[m][i.id]).filter(x => x != null);
       const lo = Math.min(...all), hi = Math.max(...all);
@@ -808,6 +837,41 @@ function theoriesFor(id){
   const t = D.theory.filter(t2 => t2.ind.includes(id)).map(t2 => t2.cite.split("(")[0].trim().replace(/,$/, "") + " (" + (t2.cite.match(/\((\d{4})/) || [,""])[1] + ")");
   return t.length ? t.join(" · ") : "—";
 }
+
+/* ── ① 진척도 표 ── */
+(function(){
+  const PR = D.progress || {};
+  if (!Object.keys(PR).length) { $("#progress-sec").hidden = true; return; }
+  const ids = D.zones.map(z => z.id).filter(z => PR[z]);
+  const mature = ["1","2","3"].map(z => (PR[z] || {}).fn_per_res).filter(v => v != null);
+  const matureAvg = mature.length ? mature.reduce((a, b) => a + b, 0) / mature.length : null;
+  const bar = (v, max, col) => v == null ? '<span class="muted">—</span>' :
+    `<span class="pbar"><s><i style="width:${Math.min(100, v / max * 100)}%;${col ? "background:" + col : ""}"></i></s><b class="num" style="min-width:36px;text-align:right">${v}%</b></span>`;
+  const planCell = (z, key, now) => {
+    const pl = (D.plan || {})[z];
+    if (!pl) return '<span class="muted">—</span>';
+    if (pl[key] == null) return '<span class="muted small">계획값 입력 필요</span>';
+    return `<b class="num">${Math.round(now / pl[key] * 100)}%</b>`;
+  };
+  let h = `<tr><th>생활권</th><th>조성 단계</th><th style="width:150px">최근 5년 준공 비중</th><th style="width:150px">시가지화율<br><span class="muted">(조성면적 대용)</span></th>
+    <th>준공 주택<br>(세대)</th><th style="width:140px">입주<br><span class="muted">(주민등록 세대 ÷ 준공)</span></th>
+    <th>주거 대비<br>계획기능 연면적</th><th>계획 대비<br>주택 공급</th><th>계획 대비<br>조성면적</th></tr>`;
+  for (const z of ids) {
+    const v = PR[z], Z = ZONE[z];
+    const fpr = v.fn_per_res == null ? "—" : (v.fn_per_res * 100).toFixed(1) + "%";
+    const flag = v.fn_per_res != null && matureAvg && ["building","early"].includes(v.stage) && v.fn_per_res < matureAvg / 5
+      ? ' <span class="pill p-watch" title="성숙 생활권 평균의 1/5 미만">점검</span>' : "";
+    h += `<tr><td><b style="color:${Z.color}">${esc(Z.name)}</b><div class="small muted">${esc(Z.role)}</div></td>
+      <td><span class="stage ${v.stage}">${esc(D.stages[v.stage])}</span><div class="small muted">연면적 ${v.floor_man.toLocaleString("ko-KR")}만㎡</div></td>
+      <td>${bar(v.recent, 100)}</td><td>${bar(v.urb, 100, "var(--q2)")}</td>
+      <td class="n">${v.hh_built ? v.hh_built.toLocaleString("ko-KR") : "—"}</td>
+      <td>${bar(v.occ, 110, "var(--good)")}</td>
+      <td class="n">${fpr}${flag}</td>
+      <td>${planCell(z, "house", v.hh_built)}</td><td>${planCell(z, "area_km2", v.area_km2 * (v.urb || 0) / 100)}</td></tr>`;
+  }
+  $("#prog").innerHTML = h;
+  $("#prog-note").innerHTML = `'주거 대비 계획기능 연면적'은 그 생활권에 계획된 기능(1 중앙행정, 2 상업·문화, 3 지방행정, 4 대학·연구, 5 의료·복지, 6 첨단·민간업무)의 연면적 ÷ 주거 연면적입니다. 성숙 생활권(1~3) 평균은 ${matureAvg == null ? "—" : (matureAvg * 100).toFixed(1) + "%"}이며, 조성 중 생활권이 그 1/5에도 못 미치면 <span class="pill p-watch">점검</span>을 붙였습니다. 읍면은 대장에 없는 오래된 주택이 많아 입주율을 계산하지 않습니다. 계획 대비 두 칸은 행복청 생활권별 계획값(계획면적·계획주택)을 넣으면 계산됩니다. 허가·착공 단계 물량은 건축인허가 자료를 연동하면 더해집니다.`;
+})();
 
 /* ── 생활권 진단 카드 ── */
 $("#lq-src").innerHTML = D.lqLive
@@ -843,7 +907,7 @@ function zoneStats(zid){
     const spanU = NAMES.filter(n => (UNITS[n].span || []).includes(z.id) && UNITS[n].zone !== z.id);
     return `<div class="zc" data-z="${z.id}" tabindex="0" role="button" aria-label="${esc(z.name)} 지도에서 보기">
       <div class="zt"><span class="zn"><i style="background:${z.color}"></i>${esc(z.name)}</span><span class="pill p-${dg.type}">${esc(D.typeNames[dg.type])}</span></div>
-      <div class="role">계획기능 — ${esc(z.role)}</div>
+      <div class="role">계획기능 — ${esc(z.role)}${(D.progress || {})[z.id] ? ` · <span class="stage ${D.progress[z.id].stage}">${esc(D.stages[D.progress[z.id].stage])}</span>` : ""}</div>
       ${radar(z.id) || '<div class="small muted" style="padding:28px 0;text-align:center">건물·사업체가 거의 없어<br>특화도를 계산하지 않습니다.</div>'}
       ${(D.floor[z.id] || {}).thin ? `<div class="small" style="color:var(--warn);text-align:center">주의 — 건축물대장 등재 연면적이 ${(D.floor[z.id].tot / 10000).toFixed(1)}만㎡뿐이라 몇 동의 건물에 좌우되는 값입니다.</div>` : ""}
       <h3>${esc(dg.head)}</h3><p>${esc(dg.body)}</p>
@@ -911,7 +975,7 @@ $("#theory").innerHTML = D.theory.map(t => `
     <div><div class="c">${esc(t.cite)}</div><div class="i">${esc(t.idea)}</div><div class="us">${esc(t.use)}</div><div>${chipsFor(t.ind)}</div></div></div>`).join("");
 
 /* ── 개선방향 ── */
-$("#strat").innerHTML = ["A","B","C"].map(ax => `<div class="scol"><h3><i>${ax}</i>${esc(D.axes[ax].name)}</h3>` +
+$("#strat").innerHTML = ["P","A","B","C"].map(ax => `<div class="scol"><h3><i>${esc(D.axes[ax].no)}</i>${esc(D.axes[ax].name)}</h3>` +
   D.strategy.filter(s => s.axis === ax).map(s => `<div class="st"><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>
     ${s.basis.length ? `<div class="basis">근거 — ${s.basis.map(b => THEORY[b] ? esc(THEORY[b].cite.split(/[(.]/)[0].trim().replace(/,$/, "")) : "").join(" · ")}</div>` : ""}
     <div>${chipsFor(s.ind)}</div></div>`).join("") + `</div>`).join("");

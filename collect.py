@@ -596,6 +596,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     for u, v in pop.items():
         units[u]["pop"] = v
         units[u]["hh"] = round(v / hh[u], 2) if hh.get(u) else None
+        units[u]["hhcnt"] = hh.get(u)
     grouped = {n for g in LZ.CHG_GROUPS for n in g}
     for u in pop:
         if u in grouped:
@@ -668,6 +669,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
     brt_pts = [p for p in stop_pts if "BRT" in p[2].get("nodenm", "").upper() or near_brt(p[0], p[1])]
 
     hosp_pts = [(float(h["XPos"]), float(h["YPos"]), h) for h in hosps if h.get("XPos") and h.get("YPos")]
+    all_built = []
     svc_grids = {k: Grid([p for p in st_pts if f(p[2])]) for k, f in SERVICES.items()}
     svc_grids["의원"] = Grid([p for p in hosp_pts if p[2].get("clCdNm") in CLINIC_KINDS])
     sp_pts = [(float(f["faci_lot"]), float(f["faci_lat"]), f) for f in sports
@@ -705,6 +707,9 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         pts = [p for p in _points_in(s["rings"]) if next(any_grid.near(p[0], p[1], BUILT_R), None)]
         if not pts:
             continue
+        all_built.extend(pts)
+        if s.get("km2"):
+            units[n]["urb"] = round(min(100.0, len(pts) * 0.0144 / s["km2"] * 100))
         svc = sum(sum(1 for g in svc_grids.values() if next(g.near(lon, lat, WALK), None))
                   for lon, lat in pts) / len(pts)
         bus = sum(1 for lon, lat in pts if next(stop_grid.near(lon, lat, BUS_R), None)) / len(pts)
@@ -747,12 +752,13 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             units[u]["apt_n"] = len(v)
 
     # 건축물대장 → 생활권 기능 특화도(LQ)·행정동 비주거·공공연구 비중
-    lq, floor_out = {}, {}
+    lq, floor_out, progress = {}, {}, {}
     if blds:
         zone_of_legal = {u: z["id"] for z in LZ.ZONES for u in z["units"]}
         zone_of_legal.update({"어진동": "1", "가람동": "2"})
         fz, fu = {}, {}
         reg_gov = 0.0
+        recent_from = str(dt.date.today().year - 5)
         for b in blds:
             try:
                 area = float(b.get("totArea") or 0)
@@ -769,8 +775,16 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
             for key, bucket in ((z, fz), (u, fu)):
                 if not key:
                     continue
-                d = bucket.setdefault(key, {"tot": 0.0, "res": 0.0, 0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0})
+                d = bucket.setdefault(key, {"tot": 0.0, "res": 0.0, "recent": 0.0, "hh": 0,
+                                            0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0})
                 d["tot"] += area
+                if (b.get("useAprDay") or "")[:4] >= recent_from:
+                    d["recent"] += area
+                purp = (b.get("mainPurpsCdNm") or "").strip()
+                if purp == "공동주택":
+                    d["hh"] += int(b.get("hhldCnt") or 0)
+                elif purp == "단독주택":
+                    d["hh"] += max(1, int(b.get("hhldCnt") or 0))
                 if c == "res":
                     d["res"] += area
                 elif c is not None:
@@ -792,6 +806,56 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
                 units[u]["jhr"] = round(nonres / d["tot"] * 100)
                 units[u]["pub"] = round((d[0] + d[2] + d[3]) / nonres * 100) if nonres > 0 else None
         floor_out["_gov_extra"] = round(extra)
+        for u, d in fu.items():
+            if u not in units:
+                continue
+            base = d["tot"] - (extra if u == "도담·어진동" else 0)
+            units[u]["recent"] = round(d["recent"] / base * 100) if base > 0 else None
+            units[u]["hh_built"] = d["hh"]
+            hc = units[u].get("hhcnt")
+            # 읍면은 대장에 없는 오래된 주택이 많아 비율이 100%를 크게 넘는다 — 계산하지 않는다.
+            rural = LZ.ADMIN_ZONE.get(u) == "R"
+            units[u]["occ"] = round(hc / d["hh"] * 100) if hc and d["hh"] >= 300 and not rural else None
+        # 생활권 진척도
+        with open(os.path.join(HERE, "assets", "sejong_zones.json"), encoding="utf-8") as f:
+            zshapes = {z["id"]: z["rings"] for z in json.load(f)["zones"]}
+
+        def km2(rings):
+            tot = 0.0
+            for r in rings:
+                xy = [_xy(*p) for p in r]
+                tot += abs(sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(xy, xy[1:] + xy[:1]))) / 2
+            return tot / 1e6
+        hh_zone = {}
+        for u, v in units.items():
+            z = LZ.ADMIN_ZONE.get(u)
+            hh_zone[z] = hh_zone.get(z, 0) + (v.get("hhcnt") or 0)
+        for z, rings in zshapes.items():
+            d = fz.get(z, {"tot": 0.0, "res": 0.0, "recent": 0.0, "hh": 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0})
+            area = km2(rings)
+            nb = sum(1 for lon, lat in all_built if _in_unit(lon, lat, rings))
+            base = d["tot"] - (extra if z == "1" else 0)
+            recent = d["recent"] / base * 100 if base >= 100000 else None   # 준공 건물이 거의 없으면 비율이 뜻이 없다
+            plan_i = LZ.PLAN.get(z) if hasattr(LZ, "PLAN") else None
+            pf = LZ.PLANNED.get(z)
+            if base < 100000:
+                stage = "early"
+            elif recent is not None and recent >= 50:
+                stage = "building"
+            elif recent is not None and recent >= 25:
+                stage = "late"
+            else:
+                stage = "mature"
+            progress[z] = {
+                "stage": stage, "area_km2": round(area, 2),
+                "urb": round(min(100.0, nb * 0.0144 / area * 100)) if area else None,
+                "recent": round(recent) if recent is not None else None,
+                "floor_man": round(d["tot"] / 10000, 1),
+                "hh_built": d["hh"], "hh_now": hh_zone.get(z, 0) if z not in ("S",) else 0,
+                "occ": round(hh_zone.get(z, 0) / d["hh"] * 100) if d["hh"] >= 300 and z != "R" else None,
+                "fn_per_res": round(d[pf] / d["res"], 3) if pf is not None and d["res"] > 0 else None,
+                "plan": plan_i,
+            }
     # SGIS 종사자 → 직주비(종사자 ÷ 주민등록 인구). 공표 연도의 행정동 체계가 지금과 다를 수 있어
     # 없는 행정동은 CHG_GROUPS(분동 전 묶음)로 합쳐 같은 값을 준다. 어진동은 도담·어진동에 더한다.
     if company:
@@ -832,7 +896,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
         "school": [{"n": s["name"], "t": s["kind"], "lon": lon, "lat": lat} for lon, lat, s in sch_pts],
     }
     return {
-        "lq": lq, "floor": floor_out,
+        "lq": lq, "floor": floor_out, "progress": progress,
         "points": points,
         "vacancy": vacancy,
         "asof": {"reb": f"{vac_q[:4]}년 {int(vac_q[4:])}분기" if vac_q else "", "sgis": (company or {}).get("year", ""), "neis": dt.date.today().strftime("%Y-%m-%d"), "bld": dt.date.today().strftime("%Y-%m-%d"), "park": dt.date.today().strftime("%Y-%m-%d"),
@@ -848,7 +912,7 @@ def analyze(pop_ym, pop_now, pop_before, age, store_ym, stores, stops, trades, h
 
 
 LIVE_IND = {"mois_pop": ["pop", "chg", "hh"], "mois_age": ["old", "kid"],
-            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"]}
+            "sbiz": ["mix", "dens", "svc"], "tago": ["bus", "brt", "urb"], "rtms": ["apt"], "hira": ["med"], "kspo": ["psport"], "lib": ["lib"], "park": [], "bld": ["jhr", "pub", "recent", "occ"], "neis": ["school"], "sgis": ["emp"], "reb": ["vac"]}
 
 
 def collect() -> dict:
