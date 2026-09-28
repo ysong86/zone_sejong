@@ -859,7 +859,7 @@ function theoriesFor(id){
     <th style="width:130px">주택 공급 진척<br><span class="muted">(준공 ÷ 준공+승인·착공)</span></th>
     <th>주거 대비<br>계획기능 연면적</th><th>건설 파이프라인<br><span class="muted">(착공 중 / 허가, 만㎡)</span></th>
     <th>파이프라인 중<br>계획기능</th><th style="width:130px">건설 진척률<br><span class="muted">(준공 ÷ 준공+진행)</span></th>
-    <th>계획면적<br><span class="muted">(지구단위계획구역)</span></th><th>계획 대비<br>조성면적</th><th>계획 대비<br>주택 공급</th></tr>`;
+    <th>계획면적<br><span class="muted">(지구단위계획구역)</span></th><th>계획 대비<br>조성면적</th><th style="width:150px">분양 확정분 대비 준공<br><span class="muted">(행복청 분양 누계)</span></th></tr>`;
   for (const z of ids) {
     const v = PR[z], Z = ZONE[z];
     const fpr = v.fn_per_res == null ? "—" : (v.fn_per_res * 100).toFixed(1) + "%";
@@ -879,10 +879,10 @@ function theoriesFor(id){
       <td>${bar(v.build_rate, 100, "var(--q4)")}</td>
       <td class="n">${(D.plan || {})[z] && D.plan[z].area_km2 ? D.plan[z].area_km2.toFixed(2) + "㎢" + (D.plan[z].area_note ? '<div class="small muted">' + esc(D.plan[z].area_note) + "</div>" : "") : '<span class="muted">—</span>'}</td>
       <td>${(D.plan || {})[z] && D.plan[z].area_km2 ? bar(Math.min(100, Math.round(v.area_km2 * (v.urb || 0) / 100 / D.plan[z].area_km2 * 100)), 100, "var(--q3)") : '<span class="muted">—</span>'}</td>
-      <td>${planCell(z, "house", v.hh_built)}</td></tr>`;
+      <td>${(D.supply || {})[z] && D.supply[z].total ? bar(Math.min(100, Math.round(v.hh_built / D.supply[z].total * 100)), 100, "var(--good)") + `<div class="small muted">준공 ${v.hh_built.toLocaleString("ko-KR")} / 분양 ${D.supply[z].total.toLocaleString("ko-KR")}세대</div>` : '<span class="muted">—</span>'}</td></tr>`;
   }
   $("#prog").innerHTML = h;
-  $("#prog-note").innerHTML = `'주거 대비 계획기능 연면적'은 그 생활권에 계획된 기능(1 중앙행정, 2 상업·문화, 3 지방행정, 4 대학·연구, 5 의료·복지, 6 첨단·민간업무)의 연면적 ÷ 주거 연면적입니다. 성숙 생활권(1~3) 평균은 ${matureAvg == null ? "—" : (matureAvg * 100).toFixed(1) + "%"}이며, 조성 중 생활권이 그 1/5에도 못 미치면 <span class="pill p-watch">점검</span>을 붙였습니다. 읍면은 대장에 없는 오래된 주택이 많아 입주율을 계산하지 않습니다. '건설 파이프라인'은 건축인허가 자료에서 2018년 이후 허가됐지만 아직 사용승인 전인 연면적입니다(대수선·용도변경 제외). 30세대 이상 공동주택은 주택법 사업계획승인 자료(주택인허가)로 따로 셉니다 — '주택 파이프라인'은 2018년 이후 승인됐지만 사용검사 전인 단지의 세대이고, 입주 예정은 사용검사 예정 연도입니다(예정일이 이미 지났는데 사용검사 기록이 없는 단지는 갱신 누락으로 보고 뺐습니다). 분양 공고 전이라 아직 승인받지 않은 공급계획(예: 5생활권 2026년 공급 4,225호의 일부)은 잡히지 않습니다. 계획면적은 행복청 지구단위계획 결정조서의 기초생활권별 구역면적 합계이고, '계획 대비 조성면적'은 시가지 면적(시가지화율 × 생활권 면적) ÷ 계획면적입니다. 계획주택은 지구단위계획에 생활권 합계가 없어(블록별 세대수만) 개발·실시계획 자료가 필요합니다.`;
+  $("#prog-note").innerHTML = `'주거 대비 계획기능 연면적'은 그 생활권에 계획된 기능(1 중앙행정, 2 상업·문화, 3 지방행정, 4 대학·연구, 5 의료·복지, 6 첨단·민간업무)의 연면적 ÷ 주거 연면적입니다. 성숙 생활권(1~3) 평균은 ${matureAvg == null ? "—" : (matureAvg * 100).toFixed(1) + "%"}이며, 조성 중 생활권이 그 1/5에도 못 미치면 <span class="pill p-watch">점검</span>을 붙였습니다. 읍면은 대장에 없는 오래된 주택이 많아 입주율을 계산하지 않습니다. '건설 파이프라인'은 건축인허가 자료에서 2018년 이후 허가됐지만 아직 사용승인 전인 연면적입니다(대수선·용도변경 제외). 30세대 이상 공동주택은 주택법 사업계획승인 자료(주택인허가)로 따로 셉니다 — '주택 파이프라인'은 2018년 이후 승인됐지만 사용검사 전인 단지의 세대이고, 입주 예정은 사용검사 예정 연도입니다(예정일이 이미 지났는데 사용검사 기록이 없는 단지는 갱신 누락으로 보고 뺐습니다). 분양 공고 전이라 아직 승인받지 않은 공급계획(예: 5생활권 2026년 공급 4,225호의 일부)은 잡히지 않습니다. 계획면적은 행복청 지구단위계획 결정조서의 기초생활권별 구역면적 합계이고, '계획 대비 조성면적'은 시가지 면적(시가지화율 × 생활권 면적) ÷ 계획면적입니다. '분양 확정분 대비 준공'은 행복청 「주택분양계획 및 실적」(공공데이터포털, ${esc(D.supplyTo || "")}년 계획분까지)의 생활권별 분양 세대 누계 대비 건축물대장 준공 세대입니다. <b>최종 계획주택 대비가 아닙니다</b> — 행복청이 밝힌 앞으로의 추가 공급(6만 호 이상)은 생활권별로 나뉘어 공개되지 않았습니다. 1~4생활권은 분양 누계와 준공이 거의 같아 확정 물량이 모두 지어진 상태입니다.`;
 })();
 
 /* ── 생활권 진단 카드 ── */

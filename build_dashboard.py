@@ -57,6 +57,27 @@ def _collected():
         return json.load(f)
 
 
+def _supply():
+    """행복청 주택분양계획 및 실적(공공데이터포털 15054511, CSV) → 생활권별 분양 세대 누계.
+
+    최종 계획주택이 아니라 지금까지 확정된 분양 물량(실적 + 올해 계획)이다.
+    """
+    import csv
+    path = os.path.join(ASSETS, "naacc_housing.csv")
+    if not os.path.exists(path):
+        return {}, ""
+    out, last = {}, ""
+    with open(path, encoding="utf-8-sig") as f:
+        for r in csv.DictReader(f):
+            z = (r.get("위치") or "").strip()[:1]
+            n = int((r.get("세대수") or "0").replace(",", "") or 0)
+            d = out.setdefault(z, {"total": 0, "rows": 0})
+            d["total"] += n
+            d["rows"] += 1
+            last = max(last, (r.get("분양계획연도") or "").strip())
+    return out, last
+
+
 def build_data(demo: bool = True) -> dict:
     units = LZ.sample_units()
     apis = [dict(a) for a in LZ.APIS]
@@ -121,6 +142,7 @@ def build_data(demo: bool = True) -> dict:
         "progress": (got or {}).get("progress", {}),
         "stages": LZ.STAGES,
         "plan": LZ.PLAN, "planSource": LZ.PLAN_SOURCE, "planArea": LZ.PLAN_AREA_M2,
+        "supply": _supply()[0], "supplyTo": _supply()[1],
         "diagnosis": LZ.DIAGNOSIS,
         "typeNames": TYPE_NAMES,
         "theory": LZ.THEORY,
