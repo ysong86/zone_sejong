@@ -299,8 +299,14 @@ def fetch_commute():
     o = {r["C2"]: int(float(r["DT"])) for r in out}
     i = {r["C1"]: int(float(r["DT"])) for r in inn}
     total, internal = o.get("00", 0), o.get("29010", 0)
+    names = {r["C2"]: r["C2_NM"] for r in out}
+    names.update({r["C1"]: r["C1_NM"] for r in inn})
+    SUB = {"dj": ["25010", "25020", "25030", "25040", "25050"], "cj": ["33041", "33042", "33043", "33044"],
+           "gj": ["34020"], "ca": ["34011", "34012", "34040"], "sm": ["90"]}
     partners = {pid: {"out": sum(o.get(c, 0) for c in codes),
-                      "in": None if pid == "sm" else sum(i.get(c, 0) for c in codes)}
+                      "in": None if pid == "sm" else sum(i.get(c, 0) for c in codes),
+                      "detail": sorted([[names.get(c, c).strip(), o.get(c, 0), i.get(c)] for c in SUB[pid]],
+                                       key=lambda x: -x[1])}
                 for pid, codes in COMMUTE_PARTNERS.items()}
     return {"year": out[0]["PRD_DE"] if out else "", "total": total, "internal": internal,
             "out": total - internal, "in": i.get("00", 0) - i.get("29010", 0), "partners": partners}
@@ -430,7 +436,30 @@ def analyze_od(od, units):
                 units[u]["outc"] = round(a["work_out"] / a["work"] * 100)
             if t and t[0] > 0:
                 units[u]["transit"] = round(t[1] / t[0] * 100, 1)
-    return {"year": od["sheet"], "flows": [[a, b, round(v / 1000, 1)] for (a, b), v in
+    def partner(z):
+        v = Z.get(z) or {}
+        sido, sgg = v.get("sido") or "", v.get("sgg") or ""
+        if sido.startswith("대전"):
+            return "dj"
+        if "청주" in sgg:
+            return "cj"
+        if "공주" in sgg:
+            return "gj"
+        if "천안" in sgg or "아산" in sgg:
+            return "ca"
+        if sido.startswith(("서울", "경기", "인천")):
+            return "sm"
+        return None
+    ext = {}
+    for r in od["obj"]:
+        o, d = r[0], r[1]
+        if (o in SJ) == (d in SJ):
+            continue
+        p = partner(d if o in SJ else o)
+        if p:
+            ext[p] = ext.get(p, 0.0) + r[i_tot]
+    return {"year": od["sheet"], "external": {k: round(v) for k, v in ext.items()},
+            "flows": [[a, b, round(v / 1000, 1)] for (a, b), v in
                                            sorted(flows.items(), key=lambda x: -x[1])]}
 
 

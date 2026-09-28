@@ -107,6 +107,11 @@ def build_data(demo: bool = True) -> dict:
                 p = commute["partners"].get(x["id"], {})
                 x["out"], x["in"] = p.get("out"), p.get("in")
                 x["trips"] = round(((p.get("out") or 0) + (p.get("in") or 0)) / 1000, 1)
+                x["detail"] = p.get("detail") or []
+        odx = ((got or {}).get("od") or {}).get("external") or {}
+        for x in external:
+            if x["id"] in odx:
+                x["od"] = odx[x["id"]]
         if got.get("lq"):
             lq, lq_live = dict(got["lq"]), True
     admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
