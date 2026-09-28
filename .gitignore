@@ -3,3 +3,7 @@ data/raw/
 data/latest.json
 __pycache__/
 *.pyc
+site/
+gate_test.html
+.claude/
+dashboard.html
