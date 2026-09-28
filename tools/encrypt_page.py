@@ -30,23 +30,25 @@ GATE = r"""<!doctype html>
 <title>세종 생활권 상황판</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Nanum+Myeongjo:wght@800&display=swap">
 <style>
-:root{--ground:#F2F4F1;--panel:#fff;--ink:#15232A;--ink2:#4B5B62;--ink3:#7C8A8F;--line:#D6DDD9;--accent:#1D5C7C;--bad:#B03A3A}
-@media (prefers-color-scheme: dark){:root{--ground:#0E1619;--panel:#152125;--ink:#E3ECEA;--ink2:#A4B4B4;--ink3:#72858A;--line:#2B3B40;--accent:#74B8D6;--bad:#E07A72;color-scheme:dark}}
+:root{--ground:#F2F4F1;--panel:#fff;--ink:#15232A;--ink2:#4B5B62;--ink3:#7C8A8F;--line:#D6DDD9;--accent:#1D5C7C;--bad:#B03A3A;--btnink:#fff}
+@media (prefers-color-scheme: dark){:root{--ground:#0E1619;--panel:#152125;--ink:#E3ECEA;--ink2:#A4B4B4;--ink3:#72858A;--line:#2B3B40;--accent:#74B8D6;--bad:#E07A72;--btnink:#0E1619;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ground);color:var(--ink);
   font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;padding:24px 16px}
 .box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:28px 26px}
 .eb{font-size:11.5px;letter-spacing:.08em;color:var(--ink3);font-weight:600}
-h1{font-family:"Nanum Myeongjo",serif;font-size:26px;margin:6px 0 4px;line-height:1.25}
+h1{font-family:"Nanum Myeongjo",serif;font-size:26px;margin:6px 0 4px;line-height:1.25;word-break:keep-all}
+p{word-break:keep-all}
 p{margin:0 0 18px;color:var(--ink2);font-size:13.5px;line-height:1.55}
 label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
 input[type=password]{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
 input[type=password]:focus{outline:2px solid var(--accent);outline-offset:1px}
 .row{display:flex;align-items:center;gap:6px;margin:10px 0 16px;font-size:12.5px;color:var(--ink2)}
-button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border:0;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer}
+button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border:0;border-radius:6px;background:var(--accent);color:var(--btnink);cursor:pointer}
 button[disabled]{opacity:.6;cursor:wait}
 .err{color:var(--bad);font-size:12.5px;min-height:18px;margin-top:10px}
-.foot{margin-top:18px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+.foot{margin-top:18px;font-size:12px;color:var(--ink3);line-height:1.6}
+.foot .names{display:block;white-space:nowrap;font-size:min(11.5px,3.2vw)}
 </style></head>
 <body>
 <form class="box" id="f" autocomplete="off">
@@ -58,7 +60,7 @@ button[disabled]{opacity:.6;cursor:wait}
   <div class="row"><input type="checkbox" id="rem"><label for="rem" style="margin:0;font-weight:400">이 브라우저에서 기억</label></div>
   <button id="go" type="submit">열기</button>
   <div class="err" id="err" role="alert"></div>
-  <div class="foot">제작: 세종연구원 연구모임(김성표, 안용준, 김흥주, 남영식, 이재민, 송양호, 이자은)</div>
+  <div class="foot">제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 송양호, 이자은</span></div>
 </form>
 <script>
 const P = __PAYLOAD__;
