@@ -22,6 +22,7 @@ REFRESH = {
     "sgis": collect.fetch_sgis_company,
     "kosis": collect.fetch_commute,
     "neis": collect.fetch_schools,
+    "arch": lambda: collect.fetch_permits(collect.load_key()),
 }
 
 
@@ -37,16 +38,18 @@ def main(argv):
     vacancy = REFRESH["reb"]() if "reb" in fresh else raw("reb_vacancy")
     schools = REFRESH["neis"]() if "neis" in fresh else raw("neis")["items"]
     commute = REFRESH["kosis"]() if "kosis" in fresh else None
+    permits = REFRESH["arch"]() if "arch" in fresh else (
+        raw("permits")["items"] if os.path.exists(os.path.join(HERE, "data", "raw", "permits.json")) else [])
     res = collect.analyze(p["ym"], p["now"], p["before"], a["items"], sb["stdrYm"], sb["items"],
                           raw("tago")["items"], raw("rtms")["items"], raw("hira")["items"],
                           raw("kspo")["items"], raw("park")["items"], collect.load_libraries(),
-                          raw("bld")["items"], schools, company, vacancy)
+                          raw("bld")["items"], schools, company, vacancy, permits)
     path = os.path.join(HERE, "data", "latest.json")
     with open(path, encoding="utf-8") as f:
         old = json.load(f)
     res["commute"] = commute or old.get("commute")
     res["collected"] = old.get("collected") or dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    res["sources"] = list(collect.LIVE_IND) + (["kosis"] if res["commute"] else [])
+    res["sources"] = [s for s in collect.LIVE_IND if s != "arch" or permits] + (["kosis"] if res["commute"] else [])
     res["live"] = [i for ids in collect.LIVE_IND.values() for i in ids]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=1)

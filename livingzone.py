@@ -503,7 +503,7 @@ APIS = [
     {"id": "arch", "name": "국토교통부 건축HUB 건축인허가정보", "host": "공공데이터포털",
      "url": "apis.data.go.kr/1613000/ArchPmsHubService/getApBasisOulnInfo",
      "status": "403", "cycle": "월", "ind": [],
-     "note": "허가·착공 단계 물량(건설 파이프라인)을 보려면 필요합니다. 활용신청하면 진척도에 '착공 중' 물량이 더해집니다."},
+     "note": "2018년 이후 허가됐지만 아직 사용승인 전인 물량(착공 중·허가만 남)을 진척도 표의 '건설 파이프라인'으로 씁니다."},
     {"id": "plan", "name": "행복청 생활권별 계획값(계획면적·계획인구·계획주택)", "host": "행정중심복합도시건설청",
      "url": "livingzone.PLAN 에 입력(공개 API 없음)",
      "status": "file", "cycle": "수시", "ind": [],
