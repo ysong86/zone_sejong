@@ -156,6 +156,25 @@ svg#map.drag{cursor:grabbing}
 .p-watch{background:var(--accent-soft);color:var(--accent)}
 .stage{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;border:1px solid var(--line);color:var(--ink2);background:var(--panel2)}
 .stage.building,.stage.early{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pc{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.pc.building,.pc.early{border-color:var(--accent)}
+.pc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pc-h b{font-size:16px}
+.pc-h .role{font-size:12px;color:var(--ink3);margin-top:1px}
+.pc-g{border-top:1px solid var(--line2);padding-top:8px;display:flex;flex-direction:column;gap:7px}
+.pc-g h5{margin:0;font-size:11.5px;font-weight:700;color:var(--ink3);letter-spacing:.04em}
+.pm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:baseline}
+.pm .l{font-size:12.5px;color:var(--ink2)}
+.pm .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;color:var(--ink);text-align:right;white-space:nowrap}
+.pm .v small{font-family:var(--sans);font-size:11px;font-weight:400;color:var(--ink3);margin-left:2px}
+.pm .t{grid-column:1/-1;height:6px;border-radius:3px;background:var(--line2);overflow:hidden}
+.pm .t i{display:block;height:100%;border-radius:3px}
+.pm .s{grid-column:1/-1;font-size:11.5px;color:var(--ink3)}
+.dues{display:flex;flex-wrap:wrap;gap:4px}
+.dues span{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;font-family:var(--mono);color:var(--ink2)}
+@media (max-width:1180px){.pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.pgrid{grid-template-columns:1fr}}
 table.prog{border-collapse:collapse;width:100%;font-size:12.5px;min-width:820px}
 table.prog th{font-weight:600;color:var(--ink3);font-size:11.5px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:bottom}
 table.prog td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
@@ -331,8 +350,8 @@ footer p{margin:0;max-width:90ch}
     <h2>① 개발·건설 진척도 — 생활권이 어느 단계에 있나</h2>
     <div class="note">건축물대장(준공 연면적·세대·사용승인일)과 주민등록으로 계산했습니다. 조성 단계는 최근 5년 준공 비중으로 나눕니다: 25% 미만 <span class="stage">성숙</span> · 25~50% <span class="stage">조성 후기</span> · 50% 이상 <span class="stage building">조성 중</span> · 등재 연면적 10만㎡ 미만 <span class="stage early">초기 조성</span></div>
   </div>
-  <div class="card scroll-x"><table class="prog" id="prog"></table>
-    <p class="small muted" id="prog-note" style="margin:8px 0 0"></p></div>
+  <div class="pgrid" id="prog"></div>
+  <p class="small muted" id="prog-note" style="margin:10px 2px 0;max-width:120ch"></p>
 </section>
 
 <section>
@@ -838,51 +857,57 @@ function theoriesFor(id){
   return t.length ? t.join(" · ") : "—";
 }
 
-/* ── ① 진척도 표 ── */
+/* ── ① 진척도 카드 ── */
 (function(){
   const PR = D.progress || {};
   if (!Object.keys(PR).length) { $("#progress-sec").hidden = true; return; }
   const ids = D.zones.map(z => z.id).filter(z => PR[z]);
   const mature = ["1","2","3"].map(z => (PR[z] || {}).fn_per_res).filter(v => v != null);
   const matureAvg = mature.length ? mature.reduce((a, b) => a + b, 0) / mature.length : null;
-  const bar = (v, max, col) => v == null ? '<span class="muted">—</span>' :
-    `<span class="pbar"><s><i style="width:${Math.min(100, v / max * 100)}%;${col ? "background:" + col : ""}"></i></s><b class="num" style="min-width:36px;text-align:right">${v}%</b></span>`;
-  const planCell = (z, key, now) => {
-    const pl = (D.plan || {})[z];
-    if (!pl) return '<span class="muted">—</span>';
-    if (pl[key] == null) return '<span class="muted small">계획값 입력 필요</span>';
-    return `<b class="num">${Math.round(now / pl[key] * 100)}%</b>`;
-  };
-  let h = `<tr><th>생활권</th><th>조성 단계</th><th style="width:150px">최근 5년 준공 비중</th><th style="width:150px">시가지화율<br><span class="muted">(조성면적 대용)</span></th>
-    <th>준공 주택<br>(세대)</th><th style="width:140px">입주<br><span class="muted">(주민등록 세대 ÷ 준공)</span></th>
-    <th>주택 파이프라인<br><span class="muted">(승인 후 입주 전, 세대)</span></th><th>입주 예정<br><span class="muted">(사용검사 예정 연도)</span></th>
-    <th style="width:130px">주택 공급 진척<br><span class="muted">(준공 ÷ 준공+승인·착공)</span></th>
-    <th>주거 대비<br>계획기능 연면적</th><th>건설 파이프라인<br><span class="muted">(착공 중 / 허가, 만㎡)</span></th>
-    <th>파이프라인 중<br>계획기능</th><th style="width:130px">건설 진척률<br><span class="muted">(준공 ÷ 준공+진행)</span></th>
-    <th>계획면적<br><span class="muted">(지구단위계획구역)</span></th><th>계획 대비<br>조성면적</th><th style="width:150px">분양 확정분 대비 준공<br><span class="muted">(행복청 분양 누계)</span></th></tr>`;
-  for (const z of ids) {
-    const v = PR[z], Z = ZONE[z];
-    const fpr = v.fn_per_res == null ? "—" : (v.fn_per_res * 100).toFixed(1) + "%";
-    const flag = v.fn_per_res != null && matureAvg && ["building","early"].includes(v.stage) && v.fn_per_res < matureAvg / 5
-      ? ' <span class="pill p-watch" title="성숙 생활권 평균의 1/5 미만">점검</span>' : "";
-    h += `<tr><td><b style="color:${Z.color}">${esc(Z.name)}</b><div class="small muted">${esc(Z.role)}</div></td>
-      <td><span class="stage ${v.stage}">${esc(D.stages[v.stage])}</span><div class="small muted">연면적 ${v.floor_man.toLocaleString("ko-KR")}만㎡</div></td>
-      <td>${bar(v.recent, 100)}</td><td>${bar(v.urb, 100, "var(--q2)")}</td>
-      <td class="n">${v.hh_built ? v.hh_built.toLocaleString("ko-KR") : "—"}</td>
-      <td>${bar(v.occ, 110, "var(--good)")}</td>
-      <td class="n">${v.hs_started == null ? "—" : (v.hs_started + v.hs_approved).toLocaleString("ko-KR")}</td>
-      <td class="small">${v.hs_due && Object.keys(v.hs_due).length ? Object.entries(v.hs_due).map(([y, n]) => y + " " + n.toLocaleString("ko-KR")).join("<br>") : '<span class="muted">—</span>'}</td>
-      <td>${bar(v.hs_rate, 100, "var(--good)")}</td>
-      <td class="n">${fpr}${flag}</td>
-      <td class="n">${v.pipe_started_man == null ? "—" : v.pipe_started_man + " / " + v.pipe_permitted_man}</td>
-      <td class="n">${v.pipe_fn_man == null || D.planned[z] == null ? "—" : v.pipe_fn_man + "만㎡" + (v.pipe_fn_man === 0 && ["building","early"].includes(v.stage) ? ' <span class="pill p-watch">없음</span>' : "")}</td>
-      <td>${bar(v.build_rate, 100, "var(--q4)")}</td>
-      <td class="n">${(D.plan || {})[z] && D.plan[z].area_km2 ? D.plan[z].area_km2.toFixed(2) + "㎢" + (D.plan[z].area_note ? '<div class="small muted">' + esc(D.plan[z].area_note) + "</div>" : "") : '<span class="muted">—</span>'}</td>
-      <td>${(D.plan || {})[z] && D.plan[z].area_km2 ? bar(Math.min(100, Math.round(v.area_km2 * (v.urb || 0) / 100 / D.plan[z].area_km2 * 100)), 100, "var(--q3)") : '<span class="muted">—</span>'}</td>
-      <td>${(D.supply || {})[z] && D.supply[z].total ? bar(Math.min(100, Math.round(v.hh_built / D.supply[z].total * 100)), 100, "var(--good)") + `<div class="small muted">준공 ${v.hh_built.toLocaleString("ko-KR")} / 분양 ${D.supply[z].total.toLocaleString("ko-KR")}세대</div>` : '<span class="muted">—</span>'}</td></tr>`;
-  }
-  $("#prog").innerHTML = h;
-  $("#prog-note").innerHTML = `'주거 대비 계획기능 연면적'은 그 생활권에 계획된 기능(1 중앙행정, 2 상업·문화, 3 지방행정, 4 대학·연구, 5 의료·복지, 6 첨단·민간업무)의 연면적 ÷ 주거 연면적입니다. 성숙 생활권(1~3) 평균은 ${matureAvg == null ? "—" : (matureAvg * 100).toFixed(1) + "%"}이며, 조성 중 생활권이 그 1/5에도 못 미치면 <span class="pill p-watch">점검</span>을 붙였습니다. 읍면은 대장에 없는 오래된 주택이 많아 입주율을 계산하지 않습니다. '건설 파이프라인'은 건축인허가 자료에서 2018년 이후 허가됐지만 아직 사용승인 전인 연면적입니다(대수선·용도변경 제외). 30세대 이상 공동주택은 주택법 사업계획승인 자료(주택인허가)로 따로 셉니다 — '주택 파이프라인'은 2018년 이후 승인됐지만 사용검사 전인 단지의 세대이고, 입주 예정은 사용검사 예정 연도입니다(예정일이 이미 지났는데 사용검사 기록이 없는 단지는 갱신 누락으로 보고 뺐습니다). 분양 공고 전이라 아직 승인받지 않은 공급계획(예: 5생활권 2026년 공급 4,225호의 일부)은 잡히지 않습니다. 계획면적은 행복청 지구단위계획 결정조서의 기초생활권별 구역면적 합계이고, '계획 대비 조성면적'은 시가지 면적(시가지화율 × 생활권 면적) ÷ 계획면적입니다. '분양 확정분 대비 준공'은 행복청 「주택분양계획 및 실적」(공공데이터포털, ${esc(D.supplyTo || "")}년 계획분까지)의 생활권별 분양 세대 누계 대비 건축물대장 준공 세대입니다. <b>최종 계획주택 대비가 아닙니다</b> — 행복청이 밝힌 앞으로의 추가 공급(6만 호 이상)은 생활권별로 나뉘어 공개되지 않았습니다. 1~4생활권은 분양 누계와 준공이 거의 같아 확정 물량이 모두 지어진 상태입니다.`;
+  const fmtN = n => n == null ? "—" : n.toLocaleString("ko-KR");
+  // 막대 하나: 이름 · 값 · 막대 · 보조설명
+  const metric = (label, val, unit, pct, color, sub) => `<div class="pm"><span class="l">${label}</span>
+    <span class="v">${val == null ? "—" : val}${val == null ? "" : `<small>${unit}</small>`}</span>
+    ${pct == null ? "" : `<span class="t"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${color}"></i></span>`}
+    ${sub ? `<span class="s">${sub}</span>` : ""}</div>`;
+  const cards = ids.map(z => {
+    const v = PR[z], Z = ZONE[z], pl = (D.plan || {})[z], sp = (D.supply || {})[z];
+    const planArea = pl && pl.area_km2 ? pl.area_km2 : null;
+    const devArea = planArea ? Math.min(100, Math.round(v.area_km2 * (v.urb || 0) / 100 / planArea * 100)) : null;
+    const supRate = sp && sp.total ? Math.min(100, Math.round(v.hh_built / sp.total * 100)) : null;
+    const pipeHH = v.hs_started == null ? null : v.hs_started + v.hs_approved;
+    const planned = D.planned[z] != null;
+    const fpr = v.fn_per_res == null ? null : +(v.fn_per_res * 100).toFixed(1);
+    const weak = planned && fpr != null && matureAvg && ["building","early"].includes(v.stage) && v.fn_per_res < matureAvg / 5;
+    const dues = v.hs_due && Object.keys(v.hs_due).length
+      ? `<div class="dues">${Object.entries(v.hs_due).map(([y, n]) => `<span>${y} ${fmtN(n)}</span>`).join("")}</div>` : "";
+    return `<div class="pc ${v.stage}">
+      <div class="pc-h"><div><b style="color:${Z.color}">${esc(Z.name)}</b><div class="role">${esc(Z.role)}</div></div>
+        <span class="stage ${v.stage}">${esc(D.stages[v.stage])}</span></div>
+
+      <div class="pc-g"><h5>토지·건축</h5>
+        ${metric("최근 5년 준공 비중", v.recent, "%", v.recent, "var(--q3)", `준공 연면적 ${fmtN(v.floor_man)}만㎡`)}
+        ${planArea ? metric("계획 대비 조성면적", devArea, "%", devArea, "var(--q2)", `계획면적 ${planArea.toFixed(2)}㎢${pl.area_note ? " (" + esc(pl.area_note) + ")" : ""}`)
+                   : metric("시가지화율", v.urb, "%", v.urb, "var(--q2)", "")}
+        ${metric("건설 진척률", v.build_rate, "%", v.build_rate, "var(--q4)", v.pipe_started_man == null ? "" : `짓는 중 ${v.pipe_started_man}만㎡ · 허가만 ${v.pipe_permitted_man}만㎡`)}
+      </div>
+
+      <div class="pc-g"><h5>주택</h5>
+        ${metric("분양 확정분 대비 준공", supRate, "%", supRate, "var(--good)", sp && sp.total ? `준공 ${fmtN(v.hh_built)} / 분양 ${fmtN(sp.total)}세대` : `준공 ${fmtN(v.hh_built)}세대`)}
+        ${metric("준공 주택 입주", v.occ, "%", v.occ == null ? null : Math.min(100, v.occ), "var(--good)", "")}
+        ${metric("입주 전 단지(승인 후)", pipeHH ? fmtN(pipeHH) : (pipeHH === 0 ? "0" : null), "세대", null, "", dues ? "입주 예정 연도" : "")}
+        ${dues}
+      </div>
+
+      ${planned ? `<div class="pc-g"><h5>계획기능 따라오나</h5>
+        ${metric("주거 대비 계획기능 연면적", fpr, "%", matureAvg && fpr != null ? fpr / (matureAvg * 100) * 50 : null, weak ? "var(--warn)" : "var(--accent)",
+                 matureAvg ? `성숙 생활권 평균 ${(matureAvg * 100).toFixed(1)}%` + (weak ? ' · <span class="pill p-watch">점검</span>' : "") : "")}
+        ${metric("짓는 중·허가 중 계획기능", v.pipe_fn_man, "만㎡", null, "", v.pipe_fn_man === 0 && ["building","early"].includes(v.stage) ? '<span class="pill p-watch">없음</span>' : "")}
+      </div>` : ""}
+    </div>`;
+  });
+  $("#prog").innerHTML = cards.join("");
+  $("#prog-note").innerHTML = `<b>읽는 법</b> — 조성 면적은 시가지 면적(점포·정류장 300m 안) ÷ 행복청 지구단위계획구역 면적입니다. 건설 진척률은 준공 연면적 ÷ (준공 + 2018년 이후 허가·착공했지만 미준공 연면적)입니다(대수선·용도변경 제외). 분양 확정분은 행복청 「주택분양계획 및 실적」(${esc(D.supplyTo || "")}년 계획분까지)의 분양 세대 누계로 <b>최종 계획주택이 아닙니다</b>. 입주 전 단지는 주택법 사업계획승인 후 사용검사 전인 30세대 이상 단지입니다(예정일이 지났는데 기록이 없는 단지는 제외). 주거 대비 계획기능 막대는 성숙 생활권 평균을 절반 지점에 둔 것이며, 조성 중 생활권이 평균의 1/5에 못 미치면 <span class="pill p-watch">점검</span>을 붙였습니다. 읍면은 대장에 없는 오래된 주택이 많아 입주율을 계산하지 않습니다.`;
 })();
 
 /* ── 생활권 진단 카드 ── */
