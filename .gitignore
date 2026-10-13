@@ -7,3 +7,5 @@ site/
 gate_test.html
 .claude/
 dashboard.html
+data/video_tmp/
+docs/*.mp4
