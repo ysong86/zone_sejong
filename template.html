@@ -908,7 +908,7 @@ function srcAsof(api){
   const a = D.meta.asof || {};
   return api.split("+").map(id => ({mois_pop:"주민등록 " + ymText(a.mois_pop), mois_age:"주민등록 " + ymText(a.mois_age),
     sbiz:"상가 " + ymText(a.sbiz), tago:"정류장 " + (a.tago || ""), rtms:"실거래 " + (a.rtms || "").replace(/(\d{4})(\d{2})/g, "$1.$2"),
-    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), arch:"건축인허가 " + (a.arch || ""), ktdb:"KTDB OD " + (a.ktdb || ""), hs:"주택인허가 " + (a.hs || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년", reb:"부동산원 " + (a.reb || "")})[id] || "").filter(Boolean).join(" · ");
+    hira:"병원정보 " + (a.hira || ""), kspo:"체육시설 " + (a.kspo || ""), lib:"도서관 " + (a.lib || ""), bld:"건축물대장 " + (a.bld || ""), arch:"건축인허가 " + (a.arch || ""), ktdb:"KTDB OD " + (a.ktdb || ""), hs:"주택인허가 " + (a.hs || ""), neis:"NEIS " + (a.neis || ""), sgis:"사업체조사 " + (a.sgis || "") + "년", reb:"조치원 부동산원 " + (a.reb || ""), survey:"상가 전수조사 " + ((D.vacSurvey || {}).years || []).join("·")})[id] || "").filter(Boolean).join(" · ");
 }
 function apiNames(ids){ return ids.split("+").map(id => (D.apis.find(a => a.id === id) || {name:id}).name).join(" + "); }
 function theoriesFor(id){

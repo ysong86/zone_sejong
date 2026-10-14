@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""상황판 소개 영상(약 20초, MP4) — 실제 화면을 열어 스크롤·클릭하는 모습을 녹화한다.
+"""상황판 소개 영상(약 30초, MP4) — 실제 화면을 열어 스크롤·클릭하는 모습을 녹화한다.
 
   python tools/make_video.py
     입력: dashboard.html(평문, 로컬)   출력: docs/생활권상황판_소개.mp4
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import glob
 import os
+import shutil
 import subprocess
 import time
 
@@ -22,7 +23,22 @@ SRC = "file:///" + os.path.join(HERE, "dashboard.html").replace("\\", "/")
 TMP = os.path.join(HERE, "data", "video_tmp")
 OUT = os.path.join(HERE, "docs", "생활권상황판_소개.mp4")
 W, H = 1440, 810
-LENGTH = 20.0
+LENGTH = 31.0
+SITE = os.path.join(HERE, "site", "preview.mp4")      # 로그인 문의 '30초 미리보기' — 공개 파일이라 수치는 흐리게
+
+# 수치 흐리게 — 상가공실 상황판 미리보기와 같은 원칙(화면 구성·색만 보이게)
+BLUR = r"""
+(() => {
+  const css = document.createElement('style');
+  css.textContent = `#notice,#detail,#tip,#rank,#rank-note,#legend,#matrix td,#mx-note,#xbars,#xnote,#prog-note,
+    .zc .stats b,#axes .big,#g-ext .xlbl,.vblur{filter:blur(5px)!important}`;
+  document.head.appendChild(css);
+  const roots = '#axes,#prog,#zones .zc p,#zones .zc .small,#strat,#lq-src';
+  const mark = () => document.querySelectorAll(roots).forEach(r => r.querySelectorAll('*').forEach(e => {
+    if (!e.childElementCount && /\d/.test(e.textContent) && !/^[①②③④]/.test(e.textContent.trim())) e.classList.add('vblur'); }));
+  mark(); new MutationObserver(mark).observe(document.body, {childList: true, subtree: true});
+})();
+"""
 
 OVERLAY = r"""
 (() => {
@@ -73,6 +89,7 @@ def main():
         pg.goto(SRC, wait_until="networkidle")
         pg.evaluate("try{localStorage.clear()}catch(e){}")
         pg.evaluate(OVERLAY)
+        pg.evaluate(BLUR)
         pg.mouse.move(W * 0.55, H * 0.45)
         pg.wait_for_timeout(600)
         start = time.time() - t_open                       # 이 시점부터 영상으로 쓴다
@@ -112,6 +129,13 @@ def main():
         move_click('#map .u[data-n="나성동"]', steps=20, click=False)
         pg.wait_for_timeout(700)
 
+        # 상가 공실 — 집합상가 전수조사로 바꾼 지표, 동을 누르면 오른쪽에 자세히
+        cap("상가 공실(전수조사)", "행정동을 누르면 오른쪽에 자세한 값이 뜹니다")
+        move_click('.ind[data-i="vac"]', steps=14)
+        pg.wait_for_timeout(700)
+        move_click('#map .u[data-n="대평동"]', steps=18)
+        pg.wait_for_timeout(1500)
+
         # 7~10초 — 광역 흐름
         cap("광역 관계", "선 위에 올리면 통근 인원과 행선지가 나옵니다")
         move_click('#views [data-v="region"]', steps=16)
@@ -143,10 +167,18 @@ def main():
         scroll_to("#matrix", 900, 120)
         pg.wait_for_timeout(1100)
 
-        # 18~20초 — 개선방향
+        # 18~30초 — 개선방향
         cap("개선방향", "국내외 이론에 근거한 단계별 처방")
         scroll_to("#strat", 900, 110)
-        pg.wait_for_timeout(1300)
+        pg.wait_for_timeout(1700)
+
+        # 근거 — 이론·사례, 실측 자료
+        cap("근거 이론과 국내외 사례", "중심지이론 · 15분 도시 · 압축도시 …")
+        scroll_to("#theory", 900, 110)
+        pg.wait_for_timeout(1700)
+        cap("공공데이터 실측 연동", "인구 · 상가 · 건축물 · 교통 · 상가공실 전수조사")
+        scroll_to("#apis", 1000, 140)
+        pg.wait_for_timeout(1900)
         cap("")
         pg.wait_for_timeout(500)
 
@@ -161,6 +193,8 @@ def main():
            "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "slow", "-crf", "20",
            "-movflags", "+faststart", OUT]
     subprocess.run(cmd, check=True, capture_output=True)
+    os.makedirs(os.path.dirname(SITE), exist_ok=True)
+    shutil.copyfile(OUT, SITE)
     print(f"영상: {OUT}  ({dur:.1f}초, 녹화 {end - start:.1f}초)")
 
 
