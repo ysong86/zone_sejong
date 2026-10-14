@@ -156,12 +156,11 @@ HITS_CSS = """
 
 # 세종연구원 시그니처(국영문 좌우조합) — 문 상자 아래 공통. 공식 그림(assets/sri_signature.png)을 그대로 넣는다.
 # 색은 바꾸지 않는다(사용자 지정: 남색·초록 그대로). 흰 판 위에 올려 어두운 화면에서도 보이게 한다.
-# 영문 표기가 그림 높이의 9% 뿐이라 상자 안(폭 ~328px)에선 8px 에 못 미친다 → 상자 밖에 상자 폭(380px)으로 둔다.
+# 크기는 상자 안 높이 48px(사용자 선호). 흐림은 크기가 아니라 저해상 그림 탓이었다 → 표시 폭의 약 3배 해상도 그림을 줄여 쓴다.
 SRI_PNG = os.path.join(HERE, "assets", "sri_signature.png")
 SRI_CSS = """
-body{flex-direction:column}
-.sri{width:100%;max-width:380px;margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.sri img{display:block;width:100%;height:auto}
+.sri{display:flex;justify-content:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.sri img{display:block;height:48px;width:auto;max-width:100%;background:#fff;border-radius:6px;padding:4px 8px;box-sizing:border-box}
 """
 
 
@@ -171,8 +170,8 @@ def _gate_sri(gate):
     with open(SRI_PNG, "rb") as f:
         src = "data:image/png;base64," + base64.b64encode(f.read()).decode("ascii")
     gate = gate.replace("</style>", SRI_CSS + "</style>", 1)
-    i = gate.rindex("</form>") + len("</form>")   # 상자 밖 아래 — 상자 폭 전체로 키워 영문 표기가 읽히게
-    return gate[:i] + f'\n<div class="sri"><img src="{src}" alt="세종연구원 SEJONG RESEARCH INSTITUTE"></div>' + gate[i:]
+    i = gate.rindex("\n</form>")   # 상자 안 맨 아래(구분선 아래 가운데) — 작게 두고, 선명도는 3배 해상도 그림을 줄여서
+    return gate[:i] + f'\n  <div class="sri"><img src="{src}" alt="세종연구원 SEJONG RESEARCH INSTITUTE"></div>' + gate[i:]
 
 
 SISTER_CSS = """
