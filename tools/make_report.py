@@ -251,7 +251,7 @@ set_font(r, 8.5, color=MUTED)
 para(doc, "보고자료", size=9, bold=True, color=ACCENT, after=2)
 para(doc, "세종 생활권 진단 상황판 구축과 활용방안", size=18, bold=True, after=2, line=1.1)
 para(doc, "행복도시 생활권 재구조화 검토를 위한 지표·지도 기반 진단 체계", size=11, color=MUTED, after=6)
-para(doc, "2026. 9. │ 세종연구원 연구모임(김성표, 안용준, 김흥주, 남영식, 이재민, 송양호, 이자은)",
+para(doc, "2026. 9. │ 세종연구원 연구모임(김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호)",
      size=9, color=MUTED, after=1)
 para(doc, "상황판 https://ysong86.github.io/zone_sejong/", size=9, color=MUTED, after=8)
 

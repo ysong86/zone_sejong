@@ -65,7 +65,7 @@ button[disabled]{opacity:.6;cursor:wait}
   <div class="row"><input type="checkbox" id="rem"><label for="rem" style="margin:0;font-weight:400">이 브라우저에서 기억</label></div>
   <button id="go" type="submit">열기</button>
   <div class="err" id="err" role="alert"></div>
-  <div class="foot">제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 송양호, 이자은</span></div>
+  <div class="foot">제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호</span></div>
 </form>
 <script>
 const P = __PAYLOAD__;
