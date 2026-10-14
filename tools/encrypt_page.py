@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """dashboard.html 을 비밀번호로 암호화한 공개용 index.html 을 만든다.
 
-  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목]
+  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"]
+
+- --video: 문에 '미리보기 영상' 버튼을 단다(출력 폴더에 같은 이름의 mp4 를 함께 올릴 것 — 비밀번호 없이 보인다).
+- --contact: 문 아래에 '비밀번호 문의' 줄을 단다. 괄호 안 메일 주소는 mailto 링크가 된다.
 
 - 비밀번호는 config.json 의 "page_password"(저장소에 올라가지 않음).
 - PBKDF2-SHA256(31만 회)로 키를 만들고 AES-256-GCM 으로 페이지 전체를 암호화한다.
@@ -127,7 +130,52 @@ def encrypt(html: str, pw: str) -> dict:
     return {"salt": enc(salt), "iv": enc(iv), "ct": enc(ct), "iter": ITER}
 
 
-def main(src=None, out=None, title=None):
+PREVIEW_CSS = """
+.pv{margin-top:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;font-size:13.5px}
+.pv:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.ask{margin-top:12px;font-size:12.5px;color:var(--ink2)}
+.ask a{color:var(--accent);font-weight:600;text-decoration:none}
+.ask a:hover{text-decoration:underline}
+#pvm{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+#pvm.on{display:flex}
+#pvm .in{width:min(960px,100%);background:var(--panel);border-radius:10px;overflow:hidden}
+#pvm .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:13px;font-weight:600}
+#pvm .bar button{width:auto;background:transparent;color:var(--ink2);padding:2px 8px;font-size:18px;line-height:1}
+#pvm video{display:block;width:100%;background:#000}
+"""
+
+
+def _gate_extras(gate, video=None, contact=None):
+    import html as _h
+    import re as _re
+    if contact:
+        m = _re.match(r"\s*(.*?)\s*\(([^)]+@[^)]+)\)\s*$", contact)
+        who = (f'{_h.escape(m.group(1))}(<a href="mailto:{_h.escape(m.group(2))}">{_h.escape(m.group(2))}</a>)'
+               if m else _h.escape(contact))
+        gate = gate.replace('<div class="err" id="err" role="alert"></div>',
+                            '<div class="err" id="err" role="alert"></div>\n  <div class="ask">비밀번호 문의: ' + who + '</div>')
+    if video:
+        v = _h.escape(video)
+        gate = gate.replace('<button id="go" type="submit">열기</button>',
+                            '<button id="go" type="submit">열기</button>\n  <button class="pv" id="pv" type="button">▶ 30초 미리보기 — 어떤 상황판인지 먼저 보기</button>')
+        gate = gate.replace("</form>", f"""</form>
+<div id="pvm" role="dialog" aria-modal="true" aria-label="상황판 미리보기"><div class="in">
+  <div class="bar"><span>상황판 미리보기 <small style="font-weight:400;color:var(--ink3)">· 수치는 흐리게 처리했습니다</small></span><button type="button" id="pvx" aria-label="닫기">×</button></div>
+  <video id="pvv" controls playsinline preload="none" src="{v}"></video></div></div>""")
+        gate = gate.replace("<script>", """<script>
+(() => { const m = document.getElementById("pvm"), v = document.getElementById("pvv");
+  const close = () => { m.classList.remove("on"); v.pause(); };
+  document.getElementById("pv").onclick = () => { m.classList.add("on"); v.play().catch(() => {}); };
+  document.getElementById("pvx").onclick = close;
+  m.addEventListener("click", e => { if (e.target === m) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); }); })();
+""", 1)
+    if video or contact:
+        gate = gate.replace("</style>", PREVIEW_CSS + "</style>", 1)
+    return gate
+
+
+def main(src=None, out=None, title=None, video=None, contact=None):
     src = src or os.path.join(HERE, "dashboard.html")
     out = out or os.path.join(HERE, "site", "index.html")
     with open(src, encoding="utf-8") as f:
@@ -141,10 +189,18 @@ def main(src=None, out=None, title=None):
         gate = gate.replace("<h1>세종 생활권 재구조화 상황판</h1>", f"<h1>{title}</h1>").replace(
             "<title>세종 생활권 상황판</title>", f"<title>{title}</title>").replace(
             '"zone_sejong_key:"', '"' + os.path.splitext(os.path.basename(os.path.dirname(os.path.abspath(src))))[0] + '_key:"')
+    gate = _gate_extras(gate, video, contact)
     with open(out, "w", encoding="utf-8") as f:
         f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
     print("암호화:", out, f"{os.path.getsize(out) / 1024:.0f} KB")
 
 
 if __name__ == "__main__":
-    main(*(sys.argv[1:4]))
+    args, opts = [], {}
+    it = iter(sys.argv[1:])
+    for a in it:
+        if a in ("--video", "--contact"):
+            opts[a[2:]] = next(it)
+        else:
+            args.append(a)
+    main(*args[:3], **opts)
