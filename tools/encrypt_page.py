@@ -53,6 +53,7 @@ button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;bor
 button[disabled]{opacity:.6;cursor:wait}
 .err{color:var(--bad);font-size:12.5px;min-height:18px;margin-top:10px}
 .foot{margin-top:18px;font-size:12px;color:var(--ink3);line-height:1.6}
+.foot .aside{display:block;font-style:italic;margin-bottom:6px;line-height:1.5}
 .foot .names{display:block;white-space:nowrap;font-size:min(11.5px,3.2vw)}
 </style></head>
 <body>
@@ -65,7 +66,7 @@ button[disabled]{opacity:.6;cursor:wait}
   <div class="row"><input type="checkbox" id="rem"><label for="rem" style="margin:0;font-weight:400">이 브라우저에서 기억</label></div>
   <button id="go" type="submit">열기</button>
   <div class="err" id="err" role="alert"></div>
-  <div class="foot">제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호</span></div>
+  <div class="foot"><span class="aside">연구원의 공식 업무가 아닌, 참여 연구자들의 호기심과 재미에서 시작한 작업입니다. 수치는 참고용으로 봐 주세요.</span>제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호</span></div>
 </form>
 <script>
 const P = __PAYLOAD__;
