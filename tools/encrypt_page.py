@@ -153,6 +153,31 @@ HITS_CSS = """
 """
 
 
+# 세종연구원 시그니처(국영문 좌우조합) — 문 맨 아래 공통. 심벌은 도형이라 SVG 로 그리고 글자는 글꼴로 쓴다.
+# 어두운 화면에서는 남색이 묻혀 원·글자를 밝게 바꾼다(삼각형 초록은 그대로).
+SRI_CSS = """
+:root{--sri-navy:#1B2689;--sri-green:#4CB13C}
+@media (prefers-color-scheme: dark){:root{--sri-navy:#E6EAF7}}
+.sri{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+  text-decoration:none}
+.sri svg{width:42px;height:28px;flex:none}
+.sri .t{display:flex;flex-direction:column;line-height:1.05;color:var(--sri-navy)}
+.sri .t b{font-size:17px;font-weight:800;letter-spacing:.02em}
+.sri .t small{font-size:7.4px;font-weight:700;letter-spacing:.02em;margin-top:3px;white-space:nowrap}
+"""
+SRI_HTML = """
+  <div class="sri" role="img" aria-label="세종연구원">
+    <svg viewBox="0 0 96 64" aria-hidden="true"><path d="M29 2 L2 44 H56 Z" fill="var(--sri-green)"/>
+      <circle cx="66" cy="38" r="20" fill="none" stroke="var(--sri-navy)" stroke-width="14"/></svg>
+    <span class="t"><b>세종연구원</b><small>SEJONG RESEARCH INSTITUTE</small></span></div>"""
+
+
+def _gate_sri(gate):
+    gate = gate.replace("</style>", SRI_CSS + "</style>", 1)
+    i = gate.rindex("\n</form>")
+    return gate[:i] + SRI_HTML + gate[i:]
+
+
 def _gate_hits(gate, hits):
     """조회수 배지를 문(첫 화면)에 단다. hits.sh 는 캐시를 안 쓰므로 상황판의 배지가 다시 불리면 두 번 센다 →
     풀린 상황판에서는 배지 src 를 지우고, 문에서 이미 받은 배지 그림(img 요소)을 그 자리에 옮겨 붙인다."""
@@ -222,6 +247,7 @@ def main(src=None, out=None, title=None, video=None, contact=None, hits=None):
     gate = _gate_extras(gate, video, contact)
     if hits:
         gate = _gate_hits(gate, hits)
+    gate = _gate_sri(gate)
     with open(out, "w", encoding="utf-8") as f:
         f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
     print("암호화:", out, f"{os.path.getsize(out) / 1024:.0f} KB")
