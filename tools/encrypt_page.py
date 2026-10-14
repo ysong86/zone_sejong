@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """dashboard.html 을 비밀번호로 암호화한 공개용 index.html 을 만든다.
 
-  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"] [--hits 배지주소]
+  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"] [--hits 배지주소] [--sister "이름|주소,이름|주소"]
 
 - --video: 문에 '미리보기 영상' 버튼을 단다(출력 폴더에 같은 이름의 mp4 를 함께 올릴 것 — 비밀번호 없이 보인다).
 - --hits: 조회수 배지(hits.sh)를 문 맨 아래에 단다. 첫 화면부터 세고, 풀린 상황판에서는 같은 배지를 옮겨 붙여 두 번 세지 않는다.
+- --sister: '함께 보는 상황판' 링크 상자(자기 상황판은 빼고 넘길 것).
 - --contact: 문 아래에 '비밀번호 문의' 줄을 단다. 괄호 안 메일 주소는 mailto 링크가 된다.
 
 - 비밀번호는 config.json 의 "page_password"(저장소에 올라가지 않음).
@@ -153,29 +154,44 @@ HITS_CSS = """
 """
 
 
-# 세종연구원 시그니처(국영문 좌우조합) — 문 맨 아래 공통. 심벌은 도형이라 SVG 로 그리고 글자는 글꼴로 쓴다.
-# 어두운 화면에서는 남색이 묻혀 원·글자를 밝게 바꾼다(삼각형 초록은 그대로).
+# 세종연구원 시그니처(국영문 좌우조합) — 문 맨 아래 공통. 공식 그림(assets/sri_signature.png)을 그대로 넣는다.
+# 색은 바꾸지 않는다(사용자 지정: 남색·초록 그대로). 어두운 화면에서는 로고 뒤에만 흰 바탕을 깐다.
+SRI_PNG = os.path.join(HERE, "assets", "sri_signature.png")
 SRI_CSS = """
-:root{--sri-navy:#1B2689;--sri-green:#4CB13C}
-@media (prefers-color-scheme: dark){:root{--sri-navy:#E6EAF7}}
-.sri{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
-  text-decoration:none}
-.sri svg{width:42px;height:28px;flex:none}
-.sri .t{display:flex;flex-direction:column;line-height:1.05;color:var(--sri-navy)}
-.sri .t b{font-size:17px;font-weight:800;letter-spacing:.02em}
-.sri .t small{font-size:7.4px;font-weight:700;letter-spacing:.02em;margin-top:3px;white-space:nowrap}
+.sri{display:flex;justify-content:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.sri img{display:block;height:46px;width:auto;max-width:100%;background:#fff;border-radius:6px;padding:5px 10px}
 """
-SRI_HTML = """
-  <div class="sri" role="img" aria-label="세종연구원">
-    <svg viewBox="0 0 96 64" aria-hidden="true"><path d="M29 2 L2 44 H56 Z" fill="var(--sri-green)"/>
-      <circle cx="66" cy="38" r="20" fill="none" stroke="var(--sri-navy)" stroke-width="14"/></svg>
-    <span class="t"><b>세종연구원</b><small>SEJONG RESEARCH INSTITUTE</small></span></div>"""
 
 
 def _gate_sri(gate):
+    if not os.path.exists(SRI_PNG):
+        return gate
+    with open(SRI_PNG, "rb") as f:
+        src = "data:image/png;base64," + base64.b64encode(f.read()).decode("ascii")
     gate = gate.replace("</style>", SRI_CSS + "</style>", 1)
     i = gate.rindex("\n</form>")
-    return gate[:i] + SRI_HTML + gate[i:]
+    return gate[:i] + f'\n  <div class="sri"><img src="{src}" alt="세종연구원 SEJONG RESEARCH INSTITUTE"></div>' + gate[i:]
+
+
+SISTER_CSS = """
+.sister{margin:16px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;gap:4px}
+.sister .eb{margin-bottom:2px}
+.sister a{font-size:13px;font-weight:600;text-decoration:none;color:var(--accent)}
+.sister a:hover{text-decoration:underline}
+"""
+
+
+def _gate_sister(gate, sister):
+    """'함께 보는 상황판' 링크 — sister = "이름|주소,이름|주소,…" (상황판 머리글 .sister 와 같은 모양)."""
+    import html as _h
+    items = [x.split("|", 1) for x in sister.split(",") if "|" in x]
+    if not items:
+        return gate
+    links = "".join(f'\n    <a href="{_h.escape(u.strip())}" target="_blank" rel="noopener">{_h.escape(n.strip())} ↗</a>'
+                    for n, u in items)
+    gate = gate.replace("</style>", SISTER_CSS + "</style>", 1)
+    return gate.replace('  <div class="foot">',
+                        f'  <nav class="sister" aria-label="함께 보는 상황판"><span class="eb">함께 보는 상황판</span>{links}\n  </nav>\n  <div class="foot">', 1)
 
 
 def _gate_hits(gate, hits):
@@ -230,7 +246,7 @@ def _gate_extras(gate, video=None, contact=None):
     return gate
 
 
-def main(src=None, out=None, title=None, video=None, contact=None, hits=None):
+def main(src=None, out=None, title=None, video=None, contact=None, hits=None, sister=None):
     src = src or os.path.join(HERE, "dashboard.html")
     out = out or os.path.join(HERE, "site", "index.html")
     with open(src, encoding="utf-8") as f:
@@ -247,6 +263,8 @@ def main(src=None, out=None, title=None, video=None, contact=None, hits=None):
     gate = _gate_extras(gate, video, contact)
     if hits:
         gate = _gate_hits(gate, hits)
+    if sister:
+        gate = _gate_sister(gate, sister)
     gate = _gate_sri(gate)
     with open(out, "w", encoding="utf-8") as f:
         f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
@@ -257,7 +275,7 @@ if __name__ == "__main__":
     args, opts = [], {}
     it = iter(sys.argv[1:])
     for a in it:
-        if a in ("--video", "--contact", "--hits"):
+        if a in ("--video", "--contact", "--hits", "--sister"):
             opts[a[2:]] = next(it)
         else:
             args.append(a)
