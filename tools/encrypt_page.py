@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """dashboard.html 을 비밀번호로 암호화한 공개용 index.html 을 만든다.
 
-  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"]
+  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"] [--hits 배지주소]
 
 - --video: 문에 '미리보기 영상' 버튼을 단다(출력 폴더에 같은 이름의 mp4 를 함께 올릴 것 — 비밀번호 없이 보인다).
+- --hits: 조회수 배지(hits.sh)를 문 맨 아래에 단다. 첫 화면부터 세고, 풀린 상황판에서는 같은 배지를 옮겨 붙여 두 번 세지 않는다.
 - --contact: 문 아래에 '비밀번호 문의' 줄을 단다. 괄호 안 메일 주소는 mailto 링크가 된다.
 
 - 비밀번호는 config.json 의 "page_password"(저장소에 올라가지 않음).
@@ -145,6 +146,35 @@ PREVIEW_CSS = """
 """
 
 
+HITS_CSS = """
+.visitors{display:flex;align-items:center;gap:8px;margin-top:12px}
+.visitors img{display:block;height:20px}
+.vsub{font-size:11.5px;color:var(--ink3)}
+"""
+
+
+def _gate_hits(gate, hits):
+    """조회수 배지를 문(첫 화면)에 단다. hits.sh 는 캐시를 안 쓰므로 상황판의 배지가 다시 불리면 두 번 센다 →
+    풀린 상황판에서는 배지 src 를 지우고, 문에서 이미 받은 배지 그림(img 요소)을 그 자리에 옮겨 붙인다."""
+    import html as _h
+    gate = gate.replace("</style>", HITS_CSS + "</style>", 1)
+    gate = gate.replace('</span></div>\n</form>',
+                        '</span></div>\n  <div class="visitors"><img class="hitsbadge" src="' + _h.escape(hits) +
+                        '" alt="조회수 오늘/전체" height="20" decoding="async"><span class="vsub">오늘 / 전체</span></div>\n</form>', 1)
+    gate = gate.replace("  const html = new TextDecoder().decode(buf);\n  document.open(); document.write(html); document.close();",
+                        """  let html = new TextDecoder().decode(buf);
+  const gh = document.querySelector(".hitsbadge");
+  if (gh) html = html.replace(/(class="hitsbadge"[^>]*?)\\ssrc="[^"]*"/, '$1 data-gate-src=""');
+  document.open(); document.write(html); document.close();
+  const slot = document.querySelector('.hitsbadge[data-gate-src]');
+  if (gh && slot) { slot.replaceWith(gh); if (gh.complete && !gh.naturalWidth) gh.parentElement.hidden = true; else gh.parentElement.hidden = false; }""")
+    gate = gate.replace("<script>", """<script>
+(() => { const b = document.querySelector(".hitsbadge"); if (!b) return;
+  const hide = () => { b.parentElement.style.display = "none"; }; b.addEventListener("error", hide); })();
+""", 1)
+    return gate
+
+
 def _gate_extras(gate, video=None, contact=None):
     import html as _h
     import re as _re
@@ -175,7 +205,7 @@ def _gate_extras(gate, video=None, contact=None):
     return gate
 
 
-def main(src=None, out=None, title=None, video=None, contact=None):
+def main(src=None, out=None, title=None, video=None, contact=None, hits=None):
     src = src or os.path.join(HERE, "dashboard.html")
     out = out or os.path.join(HERE, "site", "index.html")
     with open(src, encoding="utf-8") as f:
@@ -190,6 +220,8 @@ def main(src=None, out=None, title=None, video=None, contact=None):
             "<title>세종 생활권 상황판</title>", f"<title>{title}</title>").replace(
             '"zone_sejong_key:"', '"' + os.path.splitext(os.path.basename(os.path.dirname(os.path.abspath(src))))[0] + '_key:"')
     gate = _gate_extras(gate, video, contact)
+    if hits:
+        gate = _gate_hits(gate, hits)
     with open(out, "w", encoding="utf-8") as f:
         f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
     print("암호화:", out, f"{os.path.getsize(out) / 1024:.0f} KB")
@@ -199,7 +231,7 @@ if __name__ == "__main__":
     args, opts = [], {}
     it = iter(sys.argv[1:])
     for a in it:
-        if a in ("--video", "--contact"):
+        if a in ("--video", "--contact", "--hits"):
             opts[a[2:]] = next(it)
         else:
             args.append(a)
