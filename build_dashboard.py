@@ -78,6 +78,26 @@ def _supply():
     return out, last
 
 
+VACANT = os.path.join(os.path.dirname(HERE), "sejong_vacant", "data", "analysis.json")
+
+
+def _vacant_survey():
+    """상가공실 상황판(sejong_vacant)의 전수조사 결과 → 행정동·생활권 공실률(면적 기준, 건물 합계)."""
+    if not os.path.exists(VACANT):
+        return None
+    with open(VACANT, encoding="utf-8") as f:
+        a = json.load(f)
+    agg = {}
+    for d in a["by_dong"]:
+        g = agg.setdefault(d["unit"], [0.0, 0.0])
+        g[0] += d["area"]
+        g[1] += d["area"] * d["rate"] / 100
+    return {"units": {u: round(v / s * 100, 1) for u, (s, v) in agg.items() if s},
+            "zones": {z["zone"]: {"rate": z["rate"], "n": z["n"]} for z in a["by_zone"]},
+            "total": a.get("rate_area"), "n": a.get("n_buildings"),
+            "years": a.get("survey_years")}
+
+
 def build_data(demo: bool = True) -> dict:
     units = LZ.sample_units()
     apis = [dict(a) for a in LZ.APIS]
@@ -114,6 +134,18 @@ def build_data(demo: bool = True) -> dict:
                 x["od"] = odx[x["id"]]
         if got.get("lq"):
             lq, lq_live = dict(got["lq"]), True
+    vac_survey = _vacant_survey()
+    if vac_survey:
+        for n, u in units.items():
+            if n in vac_survey["units"]:
+                u["vac"], u["vac_kind"] = vac_survey["units"][n], "전수조사"
+            elif u.get("zone") not in (None, "R"):
+                u["vac"] = None          # 행복도시인데 조사 건물이 없는 동 — 표본 값도 쓰지 않는다
+        if "vac" not in live_ind:
+            live_ind.append("vac")
+        for a in apis:
+            if a["id"] == "survey":
+                a["status"] = "ok"
     admin_meta = {a["name"]: {"note": a.get("note", ""), "span": a.get("span"), "legal": a["legal"]}
                   for a in LZ.ADMIN}
     for n, m in admin_meta.items():
@@ -124,6 +156,7 @@ def build_data(demo: bool = True) -> dict:
         "meta": {"demo": not got, "built": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
                  "asof": asof, "probed": PROBED, "live": live_ind, "counts": counts,
                  "collected": collected, "lqLive": lq_live},
+        "vacSurvey": vac_survey and {k: v for k, v in vac_survey.items() if k != "units"},
         "axes": LZ.AXES,
         "zones": LZ.ZONES,
         "indicators": LZ.INDICATORS,

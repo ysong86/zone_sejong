@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """dashboard.html 을 비밀번호로 암호화한 공개용 index.html 을 만든다.
 
-  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html]
+  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목]
 
 - 비밀번호는 config.json 의 "page_password"(저장소에 올라가지 않음).
 - PBKDF2-SHA256(31만 회)로 키를 만들고 AES-256-GCM 으로 페이지 전체를 암호화한다.
@@ -127,7 +127,7 @@ def encrypt(html: str, pw: str) -> dict:
     return {"salt": enc(salt), "iv": enc(iv), "ct": enc(ct), "iter": ITER}
 
 
-def main(src=None, out=None):
+def main(src=None, out=None, title=None):
     src = src or os.path.join(HERE, "dashboard.html")
     out = out or os.path.join(HERE, "site", "index.html")
     with open(src, encoding="utf-8") as f:
@@ -136,10 +136,15 @@ def main(src=None, out=None):
         html = "<!doctype html>\n" + html
     payload = encrypt(html, password())
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    gate = GATE
+    if title:      # 다른 상황판(예: 상가공실)에 같은 문을 쓸 때 — 제목·기억 키 이름을 바꾼다
+        gate = gate.replace("<h1>세종 생활권 재구조화 상황판</h1>", f"<h1>{title}</h1>").replace(
+            "<title>세종 생활권 상황판</title>", f"<title>{title}</title>").replace(
+            '"zone_sejong_key:"', '"' + os.path.splitext(os.path.basename(os.path.dirname(os.path.abspath(src))))[0] + '_key:"')
     with open(out, "w", encoding="utf-8") as f:
-        f.write(GATE.replace("__PAYLOAD__", json.dumps(payload)))
+        f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
     print("암호화:", out, f"{os.path.getsize(out) / 1024:.0f} KB")
 
 
 if __name__ == "__main__":
-    main(*(sys.argv[1:3]))
+    main(*(sys.argv[1:4]))

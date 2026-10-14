@@ -212,7 +212,7 @@ table.prog td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-a
 .zc .role{font-size:12px;color:var(--ink3)}
 .zc h3{font-size:13.5px;font-weight:700;line-height:1.4}
 .zc p{margin:0;font-size:12.5px;color:var(--ink2)}
-.zc .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-top:1px solid var(--line2);padding-top:6px;margin-top:auto}
+.zc .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border-top:1px solid var(--line2);padding-top:6px;margin-top:auto}
 .zc .stats div{font-size:11px;color:var(--ink3)}
 .zc .stats b{display:block;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:500}
 .radar{width:100%;max-width:220px;height:auto;align-self:center}
@@ -311,6 +311,7 @@ footer p{margin:0;max-width:90ch}
       <span class="eyebrow">함께 보는 상황판</span>
       <a href="https://ysong86.github.io/water_sejong/" target="_blank" rel="noopener">세종시 물환경 상황판 ↗</a>
       <a href="https://ysong86.github.io/traffic_sejong/" target="_blank" rel="noopener">세종시 교통안전 상황판 ↗</a>
+      <a href="https://ysong86.github.io/vacant_sejong/" target="_blank" rel="noopener">세종 상가공실 상황판 ↗</a>
     </nav>
     <div class="hdr-right">
       <span class="small muted" id="stamp"></span>
@@ -990,6 +991,8 @@ function radar(zid){
   if (plan != null) { const p = pt(plan, lq[plan]); s += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}" stroke="var(--panel)" stroke-width="1.2"/>`; }
   return s + `</svg>`;
 }
+// 상가 공실 — 행복도시 생활권은 전수조사(건물 합계), 읍면은 부동산원 표본(조치원)
+function vz(zid){ const s = D.vacSurvey && D.vacSurvey.zones[zid]; if (s) return s.rate; return zid === "R" ? (UNITS["조치원읍"] || {}).vac ?? null : null; }
 function zoneStats(zid){
   const names = NAMES.filter(n => UNITS[n].zone === zid);
   const pop = names.reduce((a, n) => a + (UNITS[n].pop || 0), 0);
@@ -1009,7 +1012,8 @@ function zoneStats(zid){
       ${spanU.length ? `<div class="small muted">인구·시설 통계는 ${esc(spanU.join("·"))} 행정동(${esc(ZONE[UNITS[spanU[0]].zone].name)})에 합산돼 따로 뗄 수 없습니다.</div>` : ""}
       <div class="stats"><div>인구<b>${st.pop ? (st.pop / 10000).toFixed(1) + "만" : "—"}</b></div>
         <div>15분 서비스<b>${st.svc == null ? "—" : st.svc.toFixed(1) + "/8"}</b></div>
-        <div>60세 이상<b>${st.old == null ? "—" : st.old.toFixed(1) + "%"}</b></div></div></div>`;
+        <div>60세 이상<b>${st.old == null ? "—" : st.old.toFixed(1) + "%"}</b></div>
+        <div title="${D.vacSurvey ? "상가 전수조사 공실률(면적), 행복도시 평균 " + D.vacSurvey.total + "%" : ""}">상가 공실<b${vz(z.id) != null && D.vacSurvey && vz(z.id) > D.vacSurvey.total ? ' style="color:var(--bad)"' : ""}>${vz(z.id) == null ? "—" : vz(z.id).toFixed(1) + "%"}</b></div></div></div>`;
   }).join("");
   $("#zones").querySelectorAll(".zc").forEach(c => {
     const go = () => {
@@ -1098,7 +1102,7 @@ document.querySelectorAll(".ichip").forEach(b => b.addEventListener("click", () 
   $("#api-note").textContent = nOk
     ? `공공데이터포털 ${nOk}종이 연동됐습니다(${D.meta.collected} 수집). 나머지는 별도 인증키나 자료 신청이 필요합니다.`
     : `${D.meta.probed}에 공공데이터포털 5종을 실제로 호출해 봤습니다. ${n403}종은 주소가 맞고 활용신청만 남았습니다(HTTP 403).`;
-  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 한국부동산원 R-ONE, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 통계청 SGIS·KOSIS, 정부청사관리본부(세종청사 연면적).";
+  $("#foot-src").textContent = "지도는 행정동 25개 단위(도담·어진동은 합침)입니다. 샘플 수치는 지표 체계 검토용입니다. 생활권 구성은 행정중심복합도시 생활권 번호 기준입니다. 자료: 행정안전부 주민등록, 소상공인시장진흥공단 상가정보, 국토교통부 TAGO·실거래가, 건강보험심사평가원 병원정보, 국민체육진흥공단 전국체육시설, 한국부동산원 R-ONE, 세종연구원 행정중심복합도시 집합상가 전수조사, 세종시 도시공원정보, 전국도서관표준데이터, 국토교통부 건축물대장, 교육부 NEIS 학교기본정보(좌표: 브이월드), 통계청 SGIS·KOSIS, 정부청사관리본부(세종청사 연면적).";
 })();
 
 /* 조회수 배지 — 집계 서버가 막히면(폐쇄망·아티팩트 미리보기) 깨진 그림 대신 조용히 접는다 */
