@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """dashboard.html 을 비밀번호로 암호화한 공개용 index.html 을 만든다.
 
-  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"] [--hits 배지주소] [--sister "이름|주소,이름|주소"]
+  python tools/encrypt_page.py [입력=dashboard.html] [출력=site/index.html] [문 제목] [--video preview.mp4] [--contact "이름(메일)"] [--hits 배지주소] [--sister "이름|주소,이름|주소"] [--nav 상황판id]
 
 - --video: 문에 '미리보기 영상' 버튼을 단다(출력 폴더에 같은 이름의 mp4 를 함께 올릴 것 — 비밀번호 없이 보인다).
 - --hits: 조회수 배지(hits.sh)를 문 맨 아래에 단다. 첫 화면부터 세고, 풀린 상황판에서는 같은 배지를 옮겨 붙여 두 번 세지 않는다.
@@ -253,7 +253,7 @@ def _gate_extras(gate, video=None, contact=None):
     return gate
 
 
-def main(src=None, out=None, title=None, video=None, contact=None, hits=None, sister=None):
+def main(src=None, out=None, title=None, video=None, contact=None, hits=None, sister=None, nav=None):
     src = src or os.path.join(HERE, "dashboard.html")
     out = out or os.path.join(HERE, "site", "index.html")
     with open(src, encoding="utf-8") as f:
@@ -273,6 +273,8 @@ def main(src=None, out=None, title=None, video=None, contact=None, hits=None, si
     if sister:
         gate = _gate_sister(gate, sister)
     gate = _gate_sri(gate)
+    if nav:   # 세종 이슈 대시보드 공통 탭 줄(대문 iframe 안에서는 스스로 숨는다)
+        gate = gate.replace("<body>", f'<body><script src="https://ysong86.github.io/nav.js" data-site="{nav}"></script>', 1)
     with open(out, "w", encoding="utf-8") as f:
         f.write(gate.replace("__PAYLOAD__", json.dumps(payload)))
     print("암호화:", out, f"{os.path.getsize(out) / 1024:.0f} KB")
@@ -282,7 +284,7 @@ if __name__ == "__main__":
     args, opts = [], {}
     it = iter(sys.argv[1:])
     for a in it:
-        if a in ("--video", "--contact", "--hits", "--sister"):
+        if a in ("--video", "--contact", "--hits", "--sister", "--nav"):
             opts[a[2:]] = next(it)
         else:
             args.append(a)
