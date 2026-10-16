@@ -189,11 +189,16 @@ def _gate_sister(gate, sister):
     items = [x.split("|", 1) for x in sister.split(",") if "|" in x]
     if not items:
         return gate
-    links = "".join(f'\n    <a href="{_h.escape(u.strip())}" target="_blank" rel="noopener">{_h.escape(n.strip())} ↗</a>'
-                    for n, u in items)
+    if len(items) == 1:      # 대문 하나로 안내할 때 — 대문 안(iframe)에서 열렸으면 대문으로 돌아가게 _top
+        n, u = items[0]
+        label, links = "다른 상황판은", f'\n    <a href="{_h.escape(u.strip())}" target="_top">{_h.escape(n.strip())} →</a>'
+    else:
+        label = "함께 보는 상황판"
+        links = "".join(f'\n    <a href="{_h.escape(u.strip())}" target="_blank" rel="noopener">{_h.escape(n.strip())} ↗</a>'
+                        for n, u in items)
     gate = gate.replace("</style>", SISTER_CSS + "</style>", 1)
     return gate.replace('  <div class="foot">',
-                        f'  <nav class="sister" aria-label="함께 보는 상황판"><span class="eb">함께 보는 상황판</span>{links}\n  </nav>\n  <div class="foot">', 1)
+                        f'  <nav class="sister" aria-label="{label}"><span class="eb">{label}</span>{links}\n  </nav>\n  <div class="foot">', 1)
 
 
 def _gate_hits(gate, hits):
