@@ -33,41 +33,74 @@ GATE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>세종 생활권 상황판</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{--ground:#F3F2EE;--panel:#FBFAF7;--ink:#111110;--ink2:#4A4A47;--ink3:#8B8A85;--line:#11111026;--accent:#152484;--bad:#B03A3A;--btnink:#fff}
-@media (prefers-color-scheme: dark){:root{--ground:#0F0F0E;--panel:#161615;--ink:#EDECE8;--ink2:#B2B1AC;--ink3:#76756F;--line:#EDECE826;--accent:#8EA0F2;--bad:#E07A72;--btnink:#0F0F0E;color-scheme:dark}}
+/* 대문(세종 이슈 대시보드)과 같은 말씨 — 종이색·검은 글자·얇은 선·각진 모서리, 강조는 남색 하나 */
+:root{--ground:#F3F2EE;--panel:#FBFAF7;--ink:#111110;--ink2:#4A4A47;--ink3:#8B8A85;--line:#11111024;--line2:#11111012;--accent:#152484;--bad:#B03A3A;--btnink:#F3F2EE}
+@media (prefers-color-scheme: dark){:root{--ground:#0F0F0E;--panel:#161615;--ink:#EDECE8;--ink2:#B2B1AC;--ink3:#76756F;--line:#EDECE82A;--line2:#EDECE814;--accent:#8EA0F2;--bad:#E07A72;--btnink:#0F0F0E;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ground);color:var(--ink);
-  font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;padding:24px 16px}
-.box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--ink);border-radius:0;padding:28px 26px}
-.eb{font-size:11px;letter-spacing:.16em;color:var(--ink3);font-weight:500}
-h1{font-family:"IBM Plex Sans KR",sans-serif;font-weight:700;letter-spacing:-.03em;font-size:28px;margin:6px 0 4px;line-height:1.15;word-break:keep-all}
-p{word-break:keep-all}
-p{margin:0 0 18px;color:var(--ink2);font-size:13.5px;line-height:1.55}
-label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
-input[type=password]{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:0;background:var(--panel);color:var(--ink)}
-input[type=password]:focus{outline:2px solid var(--accent);outline-offset:1px}
-.row{display:flex;align-items:center;gap:6px;margin:10px 0 16px;font-size:12.5px;color:var(--ink2)}
-button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border:0;border-radius:0;background:var(--accent);color:var(--btnink);cursor:pointer}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;line-height:1.5;
+  word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em}
+.sheet{max-width:1120px;margin:0 auto;padding:0 40px 32px;min-height:100vh;display:flex;flex-direction:column}
+.mast{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--ink);font-size:11.5px}
+.mast b,.mast .lk{white-space:nowrap}
+.mast b{font-weight:600;letter-spacing:.14em}
+.mast .lk{color:var(--ink3);letter-spacing:.16em;display:inline-flex;align-items:center;gap:8px}
+.mast .lk i{display:inline-block;width:7px;height:7px;background:var(--accent)}
+.box{margin:auto 0;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);column-gap:64px;padding:56px 0 0}
+.intro{padding-bottom:40px}
+.eb{font-size:12px;letter-spacing:.06em;color:var(--ink3);font-weight:500}
+h1{font-weight:700;letter-spacing:-.045em;font-size:clamp(36px,5.2vw,68px);line-height:1.02;margin:14px 0 20px}
+.intro p{margin:0;max-width:34em;font-size:15px;color:var(--ink2);line-height:1.65}
+.enter{border-left:1px solid var(--line);padding:4px 0 40px 40px;display:flex;flex-direction:column}
+label{display:block;font-size:12.5px;font-weight:500;letter-spacing:.04em;color:var(--ink3);margin-bottom:6px}
+input[type=password]{width:100%;font:inherit;font-family:"IBM Plex Mono",monospace;font-size:20px;letter-spacing:.2em;padding:10px 0;
+  border:0;border-bottom:1.5px solid var(--ink);border-radius:0;background:transparent;color:var(--ink)}
+input[type=password]:focus{outline:none;border-bottom-color:var(--accent);box-shadow:0 1.5px 0 var(--accent)}
+.row{display:flex;align-items:center;gap:8px;margin:14px 0 22px;font-size:13px;color:var(--ink2)}
+.row input{accent-color:var(--accent);width:15px;height:15px;margin:0}
+.row label{letter-spacing:0;font-size:13px;color:var(--ink2);margin:0;font-weight:400}
+button{width:100%;font:inherit;font-weight:600;font-size:15px;padding:13px 16px;border:1px solid var(--ink);border-radius:0;background:var(--ink);
+  color:var(--btnink);cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s,border-color .2s}
+button::after{content:"→";font-weight:400}
+button:hover{background:var(--accent);border-color:var(--accent)}
 button[disabled]{opacity:.6;cursor:wait}
-.err{color:var(--bad);font-size:12.5px;min-height:18px;margin-top:10px}
-.foot{margin-top:18px;font-size:12px;color:var(--ink3);line-height:1.6}
-.foot .aside{display:block;font-style:italic;margin-bottom:6px;line-height:1.5}
-.foot .names{display:block;white-space:nowrap;font-size:min(11.5px,3.2vw)}
+.err{color:var(--bad);font-size:13px;min-height:20px;margin-top:10px}
+.foot{grid-column:1;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--ink3);line-height:1.7}
+.foot .aside{display:block;font-style:italic;margin-bottom:8px;max-width:40em}
+.foot .names{display:block;font-size:11.5px}
+@media (max-width:820px){
+  .sheet{padding:0 20px 24px}
+  .mast{font-size:10.5px}
+  .box{grid-template-columns:minmax(0,1fr);padding-top:32px}
+  .intro{padding-bottom:28px}
+  .enter{border-left:0;border-top:1px solid var(--ink);padding:24px 0 32px}
+  .foot{grid-column:1}
+}
 </style></head>
 <body>
+<main class="sheet">
+<header class="mast"><b class="mono">SEJONG ISSUE DASHBOARD</b><span class="lk mono"><i></i>LOCKED</span></header>
 <form class="box" id="f" autocomplete="off">
+  <section class="intro">
   <div class="eb">세종연구원 · 검토 자료</div>
   <h1>세종 생활권 재구조화 상황판</h1>
   <p>연구모임 내부 검토용입니다. 비밀번호를 입력하면 열립니다.</p>
+  </section>
+  <section class="enter">
   <label for="pw">비밀번호</label>
   <input type="password" id="pw" autofocus required>
-  <div class="row"><input type="checkbox" id="rem"><label for="rem" style="margin:0;font-weight:400">이 브라우저에서 기억</label></div>
+  <div class="row"><input type="checkbox" id="rem"><label for="rem">이 브라우저에서 기억</label></div>
   <button id="go" type="submit">열기</button>
   <div class="err" id="err" role="alert"></div>
+  </section>
   <div class="foot"><span class="aside">연구원의 공식 업무가 아닌, 참여 연구자들의 호기심과 재미에서 시작한 작업입니다. 결과물은 참고용으로 봐 주세요.</span>제작: 세종연구원 연구모임<span class="names">김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호</span></div>
 </form>
+</main>
 <script>
 const P = __PAYLOAD__;
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -134,22 +167,25 @@ def encrypt(html: str, pw: str) -> dict:
 
 
 PREVIEW_CSS = """
-.pv{margin-top:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;font-size:13.5px}
-.pv:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
-.ask{margin-top:12px;font-size:12.5px;color:var(--ink2)}
+.pv{margin-top:8px;background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:14px}
+.pv::after{content:none}
+.pv:hover{background:transparent;border-color:var(--ink);color:var(--accent)}
+.ask{margin-top:auto;padding-top:14px;font-size:12.5px;color:var(--ink2)}
 .ask a{color:var(--accent);font-weight:600;text-decoration:none}
 .ask a:hover{text-decoration:underline}
 #pvm{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
 #pvm.on{display:flex}
-#pvm .in{width:min(960px,100%);background:var(--panel);border-radius:10px;overflow:hidden}
+#pvm .in{width:min(960px,100%);background:var(--panel);border-radius:0;overflow:hidden}
 #pvm .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:13px;font-weight:600}
-#pvm .bar button{width:auto;background:transparent;color:var(--ink2);padding:2px 8px;font-size:18px;line-height:1}
+#pvm .bar button{width:auto;background:transparent;border:0;color:var(--ink2);padding:2px 8px;font-size:18px;line-height:1}
+#pvm .bar button::after{content:none}
 #pvm video{display:block;width:100%;background:#000}
 """
 
 
 HITS_CSS = """
-.visitors{display:flex;align-items:center;gap:8px;margin-top:12px}
+.visitors{grid-column:2;grid-row:2;display:flex;align-items:center;gap:8px;align-self:start;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:820px){.visitors{grid-column:1;grid-row:auto;border-top:0;padding-top:10px}}
 .visitors img{display:block;height:20px}
 .vsub{font-size:11.5px;color:var(--ink3)}
 """
@@ -160,8 +196,9 @@ HITS_CSS = """
 # 크기는 상자 안 높이 48px(사용자 선호). 흐림은 크기가 아니라 저해상 그림 탓이었다 → 표시 폭의 약 3배 해상도 그림을 줄여 쓴다.
 SRI_PNG = os.path.join(HERE, "assets", "sri_signature.png")
 SRI_CSS = """
-.sri{display:flex;justify-content:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.sri img{display:block;height:48px;width:auto;max-width:100%;background:#fff;border-radius:6px;padding:4px 8px;box-sizing:border-box}
+.sri{grid-column:2;grid-row:2;display:flex;justify-content:flex-end;align-self:end;padding-top:16px}
+.sri img{display:block;height:44px;width:auto;max-width:100%;background:#fff;border-radius:0;padding:4px 8px;box-sizing:border-box}
+@media (max-width:820px){.sri{grid-column:1;grid-row:auto;justify-content:flex-start}}
 """
 
 
@@ -176,7 +213,7 @@ def _gate_sri(gate):
 
 
 SISTER_CSS = """
-.sister{margin:16px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;gap:4px}
+.sister{grid-column:1/-1;margin:0 0 16px;padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
 .sister .eb{margin-bottom:2px}
 .sister a{font-size:13px;font-weight:600;text-decoration:none;color:var(--accent)}
 .sister a:hover{text-decoration:underline}
