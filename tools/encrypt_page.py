@@ -33,23 +33,23 @@ GATE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>세종 생활권 상황판</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Nanum+Myeongjo:wght@800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{--ground:#F2F4F1;--panel:#fff;--ink:#15232A;--ink2:#4B5B62;--ink3:#7C8A8F;--line:#D6DDD9;--accent:#1D5C7C;--bad:#B03A3A;--btnink:#fff}
-@media (prefers-color-scheme: dark){:root{--ground:#0E1619;--panel:#152125;--ink:#E3ECEA;--ink2:#A4B4B4;--ink3:#72858A;--line:#2B3B40;--accent:#74B8D6;--bad:#E07A72;--btnink:#0E1619;color-scheme:dark}}
+:root{--ground:#F3F2EE;--panel:#FBFAF7;--ink:#111110;--ink2:#4A4A47;--ink3:#8B8A85;--line:#11111026;--accent:#152484;--bad:#B03A3A;--btnink:#fff}
+@media (prefers-color-scheme: dark){:root{--ground:#0F0F0E;--panel:#161615;--ink:#EDECE8;--ink2:#B2B1AC;--ink3:#76756F;--line:#EDECE826;--accent:#8EA0F2;--bad:#E07A72;--btnink:#0F0F0E;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ground);color:var(--ink);
   font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;padding:24px 16px}
-.box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:28px 26px}
-.eb{font-size:11.5px;letter-spacing:.08em;color:var(--ink3);font-weight:600}
-h1{font-family:"Nanum Myeongjo",serif;font-size:26px;margin:6px 0 4px;line-height:1.25;word-break:keep-all}
+.box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--ink);border-radius:0;padding:28px 26px}
+.eb{font-size:11px;letter-spacing:.16em;color:var(--ink3);font-weight:500}
+h1{font-family:"IBM Plex Sans KR",sans-serif;font-weight:700;letter-spacing:-.03em;font-size:28px;margin:6px 0 4px;line-height:1.15;word-break:keep-all}
 p{word-break:keep-all}
 p{margin:0 0 18px;color:var(--ink2);font-size:13.5px;line-height:1.55}
 label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
-input[type=password]{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+input[type=password]{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:0;background:var(--panel);color:var(--ink)}
 input[type=password]:focus{outline:2px solid var(--accent);outline-offset:1px}
 .row{display:flex;align-items:center;gap:6px;margin:10px 0 16px;font-size:12.5px;color:var(--ink2)}
-button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border:0;border-radius:6px;background:var(--accent);color:var(--btnink);cursor:pointer}
+button{width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border:0;border-radius:0;background:var(--accent);color:var(--btnink);cursor:pointer}
 button[disabled]{opacity:.6;cursor:wait}
 .err{color:var(--bad);font-size:12.5px;min-height:18px;margin-top:10px}
 .foot{margin-top:18px;font-size:12px;color:var(--ink3);line-height:1.6}

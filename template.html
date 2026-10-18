@@ -3,7 +3,7 @@
 <meta name="description" content="행복도시 6개 생활권의 기능·연계·광역 관계를 지표와 지도로 점검하고 재구조화 방향을 정리한 상황판">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Myeongjo:wght@700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
 :root{
   --ground:#F2F4F1; --panel:#FFFFFF; --panel2:#F7F8F6; --ink:#15232A; --ink2:#4B5B62; --ink3:#7C8A8F;
@@ -298,6 +298,49 @@ footer p{margin:0;max-width:90ch}
   .th{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* ======================================================================
+   대문(세종 이슈 대시보드) 디자인 — 2026-10-18
+   종이색 바탕·검은 글자·얇은 선·각진 모서리, 강조색은 남색 한 가지(다크 #8EA0F2), 제목 명조 → IBM Plex 굵게.
+   이 <style> 은 상가공실·화재안전 상황판 build.py 도 그대로 가져가 셋이 함께 바뀐다.
+   되돌리려면 이 블록만 지우면 된다. 좋음·주의·나쁨(good/warn/bad) 색은 의미가 있어 그대로 둔다.
+   ====================================================================== */
+:root{
+  --ground:#F3F2EE; --panel:#FBFAF7; --panel2:#F3F2EE; --ink:#111110; --ink2:#4A4A47; --ink3:#8B8A85;
+  --line:#1111101F; --line2:#1111100F; --accent:#152484; --accent-soft:rgba(21,36,132,.08);
+  --q0:#ECEBF1; --q1:#CBCFE6; --q2:#9AA3D3; --q3:#6370B9; --q4:#2F3D97; --q5:#152060;
+  --na:#ECEBE6; --halo:#FBFAF7; --roads:#8B8A85; --outline:#111110;
+  --serif:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F0E; --panel:#161615; --panel2:#1D1D1B; --ink:#EDECE8; --ink2:#B2B1AC; --ink3:#76756F;
+    --line:#EDECE826; --line2:#EDECE812; --accent:#8EA0F2; --accent-soft:rgba(142,160,242,.12);
+    --q0:#1C1D24; --q1:#252C55; --q2:#334089; --q3:#4D5FBA; --q4:#7688E2; --q5:#B0BCF7;
+    --na:#1D1D1B; --halo:#161615; --roads:#76756F; --outline:#EDECE8;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F0E; --panel:#161615; --panel2:#1D1D1B; --ink:#EDECE8; --ink2:#B2B1AC; --ink3:#76756F;
+  --line:#EDECE826; --line2:#EDECE812; --accent:#8EA0F2; --accent-soft:rgba(142,160,242,.12);
+  --q0:#1C1D24; --q1:#252C55; --q2:#334089; --q3:#4D5FBA; --q4:#7688E2; --q5:#B0BCF7;
+  --na:#1D1D1B; --halo:#161615; --roads:#76756F; --outline:#EDECE8;
+}
+body{word-break:keep-all;-webkit-font-smoothing:antialiased}
+.eyebrow{letter-spacing:.14em;font-weight:500}
+header.top{border-bottom:1px solid var(--ink);padding-block:30px 20px}
+header.top h1{font-family:var(--sans);font-weight:700;letter-spacing:-.04em;font-size:clamp(30px,4.2vw,56px);line-height:1.05}
+.sec-h{border-bottom:1px solid var(--ink);padding-bottom:8px}
+.sec-h h2,.detail .dn,.brief .lead .q{font-family:var(--sans);font-weight:700;letter-spacing:-.02em}
+.axes{gap:0;border-top:1px solid var(--ink)}
+.axis{background:none;border:0;border-right:1px solid var(--line);padding:14px 16px 12px}
+.axis:last-child{border-right:0}
+.axis .tag i,.axis-h i{color:var(--accent)}
+.axis,.rail,.detail,.mapbox,.btn,.notice,.sister,.chip,.tip,.ind,.lv,.card,.kpi,.panel,.box,.tile,.stat,select,input,textarea{border-radius:0!important;box-shadow:none!important}
+.rail,.detail,.mapbox{background:var(--panel)}
+.chip[aria-pressed="true"],.btn.on,.btn[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.ind[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.notice{background:transparent;border:1px solid var(--warn);border-left:3px solid var(--warn)}
 </style>
 
 <script src="https://ysong86.github.io/nav.js" data-site="zone"></script>
