@@ -181,8 +181,6 @@ PREVIEW_CSS = """
 .pv:hover .pi{transform:scale(1.08)}
 @keyframes pvring{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.2);opacity:0}}
 @keyframes pvsweep{0%{left:-35%}40%,100%{left:115%}}
-.pv.seen{border-color:var(--line);color:var(--ink)}
-.pv.seen .pi{background:var(--ink)}
 .pv.seen .pi::before,.pv.seen::before{animation:none;display:none}
 @media (prefers-reduced-motion: reduce){.pv .pi::before,.pv::before{animation:none;display:none}}
 .ask{margin-top:auto;padding-top:14px;font-size:12.5px;color:var(--ink2)}
