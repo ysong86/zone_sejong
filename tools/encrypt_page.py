@@ -170,6 +170,21 @@ PREVIEW_CSS = """
 .pv{margin-top:8px;background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:14px}
 .pv::after{content:none}
 .pv:hover{background:transparent;border-color:var(--ink);color:var(--accent)}
+.pv{position:relative;overflow:hidden;border-color:var(--accent);color:var(--accent);font-weight:600}
+.pv .pl{display:flex;align-items:center;gap:10px}
+.pv .pi{position:relative;flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent)}
+.pv .pi::after{content:"";position:absolute;left:8.5px;top:6px;border-style:solid;border-width:5px 0 5px 8px;border-color:transparent transparent transparent var(--panel)}
+.pv .pi::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:pvring 1.9s ease-out infinite}
+.pv .pt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:2px 7px;border:1px solid currentColor}
+.pv::before{content:"";position:absolute;top:0;bottom:0;left:-35%;width:28%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,color-mix(in srgb,var(--accent) 16%,transparent),transparent);animation:pvsweep 4.2s ease-in-out 1.2s infinite}
+.pv:hover .pi{transform:scale(1.08)}
+@keyframes pvring{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.2);opacity:0}}
+@keyframes pvsweep{0%{left:-35%}40%,100%{left:115%}}
+.pv.seen{border-color:var(--line);color:var(--ink)}
+.pv.seen .pi{background:var(--ink)}
+.pv.seen .pi::before,.pv.seen::before{animation:none;display:none}
+@media (prefers-reduced-motion: reduce){.pv .pi::before,.pv::before{animation:none;display:none}}
 .ask{margin-top:auto;padding-top:14px;font-size:12.5px;color:var(--ink2)}
 .ask a{color:var(--accent);font-weight:600;text-decoration:none}
 .ask a:hover{text-decoration:underline}
@@ -272,7 +287,7 @@ def _gate_extras(gate, video=None, contact=None):
     if video:
         v = _h.escape(video)
         gate = gate.replace('<button id="go" type="submit">열기</button>',
-                            '<button id="go" type="submit">열기</button>\n  <button class="pv" id="pv" type="button">▶ 30초 미리보기 — 어떤 상황판인지 먼저 보기</button>')
+                            '<button id="go" type="submit">열기</button>\n  <button class="pv" id="pv" type="button"><span class="pl"><i class="pi" aria-hidden="true"></i>미리보기 — 어떤 상황판인지 먼저 보기</span><span class="pt">30초</span></button>')
         gate = gate.replace("</form>", f"""</form>
 <div id="pvm" role="dialog" aria-modal="true" aria-label="상황판 미리보기"><div class="in">
   <div class="bar"><span>상황판 미리보기 <small style="font-weight:400;color:var(--ink3)">· 수치는 흐리게 처리했습니다</small></span><button type="button" id="pvx" aria-label="닫기">×</button></div>
@@ -280,7 +295,10 @@ def _gate_extras(gate, video=None, contact=None):
         gate = gate.replace("<script>", """<script>
 (() => { const m = document.getElementById("pvm"), v = document.getElementById("pvv");
   const close = () => { m.classList.remove("on"); v.pause(); };
-  document.getElementById("pv").onclick = () => { m.classList.add("on"); v.play().catch(() => {}); };
+  const pv = document.getElementById("pv"), SEEN = "preview_seen:" + location.pathname;
+  try { if (localStorage.getItem(SEEN)) pv.classList.add("seen"); } catch (_) {}
+  pv.onclick = () => { m.classList.add("on"); v.play().catch(() => {});
+    pv.classList.add("seen"); try { localStorage.setItem(SEEN, "1"); } catch (_) {} };
   document.getElementById("pvx").onclick = close;
   m.addEventListener("click", e => { if (e.target === m) close(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") close(); }); })();
