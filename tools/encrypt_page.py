@@ -44,7 +44,7 @@ html,body{margin:0}
 body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;line-height:1.5;
   word-break:keep-all;-webkit-font-smoothing:antialiased}
 a{color:inherit}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em}
+.mono{font-family:"IBM Plex Mono", "IBM Plex Sans KR", ui-monospace,monospace;letter-spacing:.06em}
 .sheet{max-width:1120px;margin:0 auto;padding:0 40px 32px;min-height:100vh;display:flex;flex-direction:column}
 .mast{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--ink);font-size:11.5px}
 .mast b,.mast .lk{white-space:nowrap}
@@ -58,7 +58,7 @@ h1{font-weight:700;letter-spacing:-.045em;font-size:clamp(36px,5.2vw,68px);line-
 .intro p{margin:0;max-width:34em;font-size:15px;color:var(--ink2);line-height:1.65}
 .enter{border-left:1px solid var(--line);padding:4px 0 40px 40px;display:flex;flex-direction:column}
 label{display:block;font-size:12.5px;font-weight:500;letter-spacing:.04em;color:var(--ink3);margin-bottom:6px}
-input[type=password]{width:100%;font:inherit;font-family:"IBM Plex Mono",monospace;font-size:20px;letter-spacing:.2em;padding:10px 0;
+input[type=password]{width:100%;font:inherit;font-family:"IBM Plex Mono", "IBM Plex Sans KR", monospace;font-size:20px;letter-spacing:.2em;padding:10px 0;
   border:0;border-bottom:1.5px solid var(--ink);border-radius:0;background:transparent;color:var(--ink)}
 input[type=password]:focus{outline:none;border-bottom-color:var(--accent);box-shadow:0 1.5px 0 var(--accent)}
 .row{display:flex;align-items:center;gap:8px;margin:14px 0 22px;font-size:13px;color:var(--ink2)}
@@ -175,7 +175,7 @@ PREVIEW_CSS = """
 .pv .pi{position:relative;flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent)}
 .pv .pi::after{content:"";position:absolute;left:8.5px;top:6px;border-style:solid;border-width:5px 0 5px 8px;border-color:transparent transparent transparent var(--panel)}
 .pv .pi::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:pvring 1.9s ease-out infinite}
-.pv .pt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:2px 7px;border:1px solid currentColor}
+.pv .pt{font-family:"IBM Plex Mono", "IBM Plex Sans KR", ui-monospace,monospace;font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:2px 7px;border:1px solid currentColor}
 .pv::before{content:"";position:absolute;top:0;bottom:0;left:-35%;width:28%;pointer-events:none;
   background:linear-gradient(100deg,transparent,color-mix(in srgb,var(--accent) 16%,transparent),transparent);animation:pvsweep 4.2s ease-in-out 1.2s infinite}
 .pv:hover .pi{transform:scale(1.08)}
